@@ -349,8 +349,6 @@ class Human(Agent):
 
         self.move_toward_target(visible_tiles)
 
-        print("\n")
-
     def get_status(self):
         if self.health > 0 and not self.escaped:
             return "alive"
