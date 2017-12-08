@@ -1,6 +1,7 @@
 from os import path
 import random
 import numpy as np
+import networkx as nx
 
 from mesa import Model
 from mesa.datacollection import DataCollector
@@ -28,6 +29,7 @@ class FireEvacuation(Model):
         self.height = height
         self.human_count = human_count
         self.collaboration_factor = collaboration_factor
+        self.fire_started = False  # Turns to true when a fire has started
 
         # Set up model objects
         self.schedule = RandomActivation(self)
@@ -47,6 +49,20 @@ class FireEvacuation(Model):
             if floor_object:
                 self.grid.place_agent(floor_object, (x, y))
                 self.schedule.add(floor_object)
+
+        # Create a graph of traversable routes
+        self.graph = nx.Graph()
+        for agent, x, y in self.grid.coord_iter():
+            pos = (x, y)
+
+            if not agent:
+                neighbors = self.grid.get_neighborhood(pos, moore=True, include_center=True, radius=1)
+                for neighbor in neighbors:
+                    contents = self.grid.get_cell_list_contents(neighbor)
+                    if not contents:
+                        self.graph.add_edge(pos, neighbor)
+            else:
+                print(agent)
 
         self.datacollector = DataCollector(
             {"Alive": lambda m: self.count_human_status(m, "alive"),

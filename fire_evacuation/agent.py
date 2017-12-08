@@ -1,6 +1,8 @@
-from copy import deepcopy
+import networkx as nx
+import numpy as np
+import random
 
-from mesa import Agent, space
+from mesa import Agent
 
 
 # Credits to http://www.roguebasin.com/index.php?title=Bresenham%27s_Line_Algorithm
@@ -175,6 +177,7 @@ class Human(Agent):
         self.role = role
         self.experience = experience
         self.escaped = False
+        self.planned_target = None # The location the agent is planning to move to
 
         # An empty set representing what the agent knows of the floor plan
         self.known_tiles = set()
@@ -213,6 +216,57 @@ class Human(Agent):
                 self.model.schedule.add(sight_object)
         """
 
+    def attempt_exit_plan(self):
+        fire_exits = set()
+
+        for tile in self.known_tiles:
+            contents = self.model.grid.get_cell_list_contents(tile)
+            for agent in contents:
+                if isinstance(agent, FireExit):
+                    fire_exits.add((agent, tile))
+
+        if fire_exits:
+            if len(fire_exits) > 1: # If there is more than one exit known
+                # Choose closest with some graph magic
+                pass
+            else:
+                _, pos = fire_exits.pop()
+                self.planned_target = pos
+
+            print("Agent found a fire escape!")
+
+    def get_panic_score(self):
+        health_component = (1 / np.exp(self.health * 4))
+        experience_component = (1 / np.exp(self.experience / 2))
+        nervousness_component = (self.nervousness / 10)
+        panic_score = health_component * experience_component * nervousness_component
+
+        return panic_score
+
+    def health_mobility_rules(self):
+        moore_neighborhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=True, radius=1)
+        contents = self.model.grid.get_cell_list_contents(moore_neighborhood)
+        for agent in contents:
+            if isinstance(agent, Fire):
+                self.health -= 0.2
+                self.speed -= 2
+                print("Agent got burnt!")
+            elif isinstance(agent, Smoke):
+                self.health -= 0.1
+                self.speed -= 1
+                print("Agent got hurt by smoke!")
+
+        if self.speed <= 0 or self.health <= 0:
+            self.mobility = 0
+
+    def panic_rules(self):
+        panic_score = self.get_panic_score()
+        print("Panic score:", panic_score)
+
+        if panic_score > 0.75:
+            print("Agent is panicking!")
+            self.mobility = 2
+
     def learn_environment(self):
         visible_tiles = self.get_visible_tiles()
 
@@ -228,8 +282,65 @@ class Human(Agent):
         self.knowledge = self.knowledge + new_knowledge_percentage
         print("Current knowledge:", self.knowledge)
 
+        return visible_tiles
+
+    def check_for_collaboration(self, visible_tiles):
+        contents = self.model.grid.get_cell_list_contents(visible_tiles)
+        for agent in contents:
+            if isinstance(agent, Human):
+                # Physical/Morale collaboration
+                pass
+            elif isinstance(agent, FireExit):
+                # Verbal collaboration
+                pass
+
+    def get_random_target(self):
+        self.planned_target = random.choice(list(self.known_tiles))
+
+    def move_toward_target(self, visible_tiles):
+        next_location = self.pos
+        # If the target location is visible, do a shortest path. else roughly wander in the right direction
+        if self.planned_target in visible_tiles:
+            path = nx.shortest_path(self.model.graph, self.pos, self.planned_target)
+            print("Path:", path)
+            length = len(path)
+            if len(path) <= self.speed:
+                next_location = path[length - 1]
+            else:
+                next_location = path[self.speed]
+        else:
+            # TODO: Replace with something more humanly (less efficient)
+            path = nx.shortest_path(self.model.graph, self.pos, self.planned_target)
+            print("Path:", path)
+            length = len(path)
+            if len(path) <= self.speed:
+                next_location = path[length - 1]
+            else:
+                next_location = path[self.speed]
+
+        if self.model.grid.is_cell_empty(next_location):
+            self.model.grid.move_agent(self, next_location)
+        else:
+            print("Cell not empty!")
+
     def step(self):
-        self.learn_environment()
+        self.health_mobility_rules()
+        self.panic_rules()
+        visible_tiles = self.learn_environment()
+
+        # If a fire has started, attempt to plan an exit location
+        if self.model.fire_started:
+            self.attempt_exit_plan()
+
+        # Check if anything in vision can be collaborated with
+        self.check_for_collaboration(visible_tiles)
+
+        if not self.planned_target:
+            self.get_random_target()
+
+        print("Target:", self.planned_target)
+
+        self.move_toward_target(visible_tiles)
 
     def get_status(self):
         if self.health > 0 and not self.escaped:
