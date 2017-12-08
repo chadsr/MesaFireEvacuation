@@ -177,7 +177,7 @@ class Human(Agent):
         self.role = role
         self.experience = experience
         self.escaped = False
-        self.planned_target = None # The location the agent is planning to move to
+        self.planned_target = None  # The location the agent is planning to move to
 
         # An empty set representing what the agent knows of the floor plan
         self.known_tiles = set()
@@ -226,7 +226,7 @@ class Human(Agent):
                     fire_exits.add((agent, tile))
 
         if fire_exits:
-            if len(fire_exits) > 1: # If there is more than one exit known
+            if len(fire_exits) > 1:  # If there is more than one exit known
                 # Choose closest with some graph magic
                 pass
             else:
@@ -261,7 +261,7 @@ class Human(Agent):
 
     def panic_rules(self):
         panic_score = self.get_panic_score()
-        print("Panic score:", panic_score)
+        # print("Panic score:", panic_score)
 
         if panic_score > 0.75:
             print("Agent is panicking!")
@@ -280,7 +280,7 @@ class Human(Agent):
         total_tiles = self.model.grid.width * self.model.grid.height
         new_knowledge_percentage = new_tiles / total_tiles
         self.knowledge = self.knowledge + new_knowledge_percentage
-        print("Current knowledge:", self.knowledge)
+        # print("Current knowledge:", self.knowledge)
 
         return visible_tiles
 
@@ -295,14 +295,19 @@ class Human(Agent):
                 pass
 
     def get_random_target(self):
-        self.planned_target = random.choice(list(self.known_tiles))
+        graph_nodes = self.model.graph.nodes()
+        while not self.planned_target:
+            target = random.choice(list(self.known_tiles))
+            if target in graph_nodes:
+                self.planned_target = target
+            else:
+                print("Invalid target")
 
     def move_toward_target(self, visible_tiles):
         next_location = self.pos
         # If the target location is visible, do a shortest path. else roughly wander in the right direction
         if self.planned_target in visible_tiles:
             path = nx.shortest_path(self.model.graph, self.pos, self.planned_target)
-            print("Path:", path)
             length = len(path)
             if len(path) <= self.speed:
                 next_location = path[length - 1]
@@ -311,7 +316,6 @@ class Human(Agent):
         else:
             # TODO: Replace with something more humanly (less efficient)
             path = nx.shortest_path(self.model.graph, self.pos, self.planned_target)
-            print("Path:", path)
             length = len(path)
             if len(path) <= self.speed:
                 next_location = path[length - 1]
@@ -321,7 +325,12 @@ class Human(Agent):
         if self.model.grid.is_cell_empty(next_location):
             self.model.grid.move_agent(self, next_location)
         else:
-            print("Cell not empty!")
+            print("Cell not empty!\nLocation:", self.pos, "\nTarget:", self.planned_target, "\nPath:", path, "\n")
+            self.planned_target = None  # Kind of naive for now
+
+        # The human reached their target!
+        if self.pos == self.planned_target:
+            self.planned_target = None
 
     def step(self):
         self.health_mobility_rules()
@@ -338,9 +347,9 @@ class Human(Agent):
         if not self.planned_target:
             self.get_random_target()
 
-        print("Target:", self.planned_target)
-
         self.move_toward_target(visible_tiles)
+
+        print("\n")
 
     def get_status(self):
         if self.health > 0 and not self.escaped:
