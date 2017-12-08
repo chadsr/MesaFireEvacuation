@@ -61,8 +61,6 @@ class FireEvacuation(Model):
                     contents = self.grid.get_cell_list_contents(neighbor)
                     if not contents:
                         self.graph.add_edge(pos, neighbor)
-            else:
-                print(agent)
 
         self.datacollector = DataCollector(
             {"Alive": lambda m: self.count_human_status(m, "alive"),
@@ -74,7 +72,7 @@ class FireEvacuation(Model):
             pos = self.grid.find_empty()
 
             # Create a random human
-            speed = random.randint(1, 7)
+            speed = random.randint(1, 2)
             vision = random.randint(1, 30)
             nervousness = random.randint(1, 10)
             experience = random.randint(1, 10)
