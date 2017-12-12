@@ -61,6 +61,7 @@ floor_plans = [f for f in listdir("fire_evacuation/floorplans") if path.isfile(p
 model_params = {
     "floor_plan_file": UserSettableParameter("choice", "Floorplan", value=floor_plans[0], choices=floor_plans),
     "human_count": UserSettableParameter("number", "Number Of Human Agents", value=10),
+    "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False),
     "collaboration_factor": UserSettableParameter("slider", "Collaboration Factor", value=10, min_value=0, max_value=10, step=1)
 }
 server = ModularServer(FireEvacuation, [canvas_element, human_chart], "Fire Evacuation",

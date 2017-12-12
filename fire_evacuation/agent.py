@@ -205,16 +205,14 @@ class Human(Agent):
                 except Exception as e:
                     print(e)
 
-        return visible_neighborhood
+        if self.model.visualise_vision:
+            for tile in visible_neighborhood:
+                if self.model.grid.is_cell_empty(tile):
+                    sight_object = Sight(tile, self.model)
+                    self.model.grid.place_agent(sight_object, tile)
+                    self.model.schedule.add(sight_object)
 
-        """
-        # visualise visible tiles
-        for tile in visible_neighborhood:
-            if self.model.grid.is_cell_empty(tile):
-                sight_object = Sight(tile, self.model)
-                self.model.grid.place_agent(sight_object, tile)
-                self.model.schedule.add(sight_object)
-        """
+        return visible_neighborhood
 
     def attempt_exit_plan(self):
         fire_exits = set()

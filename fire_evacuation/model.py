@@ -12,7 +12,7 @@ from .agent import Human, Wall, FireExit, Furniture
 
 
 class FireEvacuation(Model):
-    def __init__(self, floor_plan_file, human_count, collaboration_factor):
+    def __init__(self, floor_plan_file, human_count, collaboration_factor, visualise_vision):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
         with open(path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
@@ -29,6 +29,7 @@ class FireEvacuation(Model):
         self.height = height
         self.human_count = human_count
         self.collaboration_factor = collaboration_factor
+        self.visualise_vision = visualise_vision
         self.fire_started = False  # Turns to true when a fire has started
 
         # Set up model objects
