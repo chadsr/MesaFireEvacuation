@@ -143,7 +143,7 @@ class Fire(Agent):
         self.spreads_smoke = True
 
     def step(self):
-        neighborhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False, radius=self.smoke_radius)
+        neighborhood = self.model.grid.get_neighborhood(self.pos, moore=False, include_center=False, radius=self.smoke_radius)
 
         for neighbor in neighborhood:
             place_smoke = True
@@ -152,25 +152,21 @@ class Fire(Agent):
 
             if contents:
                 for agent in contents:
-                    print("Agent:", agent, agent.spreads_smoke, agent.flammable)
                     if not agent.flammable:
                         place_fire = False
-                        break
                     if not agent.spreads_smoke:
                         place_smoke = False
+                    if place_fire and place_smoke:
                         break
+
             else:
                 place_fire = False
 
-            print(neighbor, "Fire:", place_fire, "Smoke:", place_smoke)
-
             if place_fire:
-                print("Place Fire")
                 fire = Fire(neighbor, self.model)
                 self.model.grid.place_agent(fire, neighbor)
                 self.model.schedule.add(fire)
             if place_smoke:
-                print("Place Smoke")
                 smoke = Smoke(neighbor, self.model)
                 self.model.grid.place_agent(smoke, neighbor)
                 self.model.schedule.add(smoke)
@@ -191,22 +187,32 @@ class Smoke(Agent):
         super().__init__(pos, model)
         self.pos = pos
         self.smoke_radius = 1
+        self.spread_rate = 0.5  # The increment per step to increase self.spread by
+        self.spread_threshold = 1
+        self.spread = 0  # When equal or greater than spread_threshold, the smoke will spread to its neighbors
         self.flammable = False
         self.spreads_smoke = False
 
     def step(self):
-        smoke_neighborhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False, radius=self.smoke_radius)
-        for neighbor in smoke_neighborhood:
-            place_smoke = True
-            contents = self.model.grid.get_cell_list_contents(neighbor)
-            for agent in contents:
-                if not agent.spreads_smoke:
-                    place_smoke = False
+        if self.spread >= 1:
+            smoke_neighborhood = self.model.grid.get_neighborhood(self.pos, moore=False, include_center=False, radius=self.smoke_radius)
+            for neighbor in smoke_neighborhood:
+                place_smoke = True
+                contents = self.model.grid.get_cell_list_contents(neighbor)
+                for agent in contents:
+                    if not agent.spreads_smoke:
+                        place_smoke = False
+                        break
 
-            if place_smoke:
-                smoke = Smoke(neighbor, self.model)
-                self.model.grid.place_agent(smoke, neighbor)
-                self.model.schedule.add(smoke)
+                if place_smoke:
+                    smoke = Smoke(neighbor, self.model)
+                    self.model.grid.place_agent(smoke, neighbor)
+                    self.model.schedule.add(smoke)
+
+        if self.spread >= self.spread_threshold:
+            self.spread_rate = 0
+        else:
+            self.spread += self.spread_rate
 
     def get_position(self):
         return self.pos
@@ -349,6 +355,12 @@ class Human(Agent):
 
         return panic_score
 
+    def die(self):
+        pos = self.pos  # Store the agent's position of death so we can remove them and place a DeadHuman
+        self.model.grid.remove_agent(self)
+        dead_self = DeadHuman(pos, self.model)
+        self.model.grid.place_agent(dead_self, pos)
+
     def health_mobility_rules(self):
         moore_neighborhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=True, radius=1)
         contents = self.model.grid.get_cell_list_contents(moore_neighborhood)
@@ -369,10 +381,7 @@ class Human(Agent):
             self.speed = 0
 
         if self.health == 0:
-            print(self.pos)
-            dead_self = DeadHuman(self.pos, self.model)
-            self.model.grid.place_agent(dead_self, self.pos)
-            self.model.grid.remove_agent(self)
+            self.die()
         elif self.speed == 0:
             self.mobility = 0
 
@@ -467,10 +476,9 @@ class Human(Agent):
                     self.model.grid.move_agent(self, next_location)
                     self.visited_tiles.add(next_location)
                 else:
-                    print("Cell not empty!\nLocation:", self.pos, "\nNext Location:", next_location, "\nTarget:", self.planned_target, "\nPath:", path, "\n")
+                    print("\nCell not empty!\nLocation:", self.pos, "\nNext Location:", next_location, "\nTarget:", self.planned_target, "\nPath:", path, "\n")
                     graph = deepcopy(graph)  # Make a deepcopy so we can edit it without affecting the original graph
                     graph.remove_node(next_location)  # Remove the next location from the temporary graph so we can try pathing again without it
-                    print("Removed:", next_location)
                     # Next location is blocked, so find another route to target
                     next_location = None
 
@@ -479,7 +487,7 @@ class Human(Agent):
                     # The human reached their target!
                     self.planned_target = None
             else:
-                print("Target dropped")
+                print("Target location dropped")
                 self.planned_target = None
 
     def step(self):
@@ -500,9 +508,12 @@ class Human(Agent):
                 if not self.planned_target:
                     self.get_random_target()
 
+                if self.mobility == 0:
+                    print("Agent is incapacitated!")
                 if self.mobility == 1:
                     self.move_toward_target(visible_tiles)
                 elif self.mobility == 2:  # Panic movement
+                    print("Agent is moving in panic! AAAH!")
                     pass
 
                 # Agent reached a fire escape, proceed to exit
