@@ -5,14 +5,14 @@ import networkx as nx
 
 from mesa import Model
 from mesa.datacollection import DataCollector
-from mesa.space import Grid
+from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 
-from .agent import Human, Wall, FireExit, Furniture
+from .agent import Human, Wall, FireExit, Furniture, Fire, Door
 
 
 class FireEvacuation(Model):
-    def __init__(self, floor_plan_file, human_count, collaboration_factor, visualise_vision):
+    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
         with open(path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
@@ -30,11 +30,19 @@ class FireEvacuation(Model):
         self.human_count = human_count
         self.collaboration_factor = collaboration_factor
         self.visualise_vision = visualise_vision
+        self.fire_probability = fire_probability
         self.fire_started = False  # Turns to true when a fire has started
 
         # Set up model objects
         self.schedule = RandomActivation(self)
-        self.grid = Grid(height, width, torus=False)
+        self.grid = MultiGrid(height, width, torus=False)
+
+        # Used to start a fire at a random furniture location
+        self.furniture_list = []
+
+        # Used to easily see if a location is a FireExit or Door, since this needs to be done a lot
+        self.fire_exit_list = []
+        self.door_list = []
 
         # Load floorplan objects
         for (x, y), value in np.ndenumerate(floorplan):
@@ -44,8 +52,14 @@ class FireEvacuation(Model):
                 floor_object = Wall((x, y), self)
             elif value is "E":
                 floor_object = FireExit((x, y), self)
+                self.fire_exit_list.append((x, y))
+                self.door_list.append((x, y))  # Add fire exits to doors as well, since, well, they are
             elif value is "F":
                 floor_object = Furniture((x, y), self)
+                self.furniture_list.append((x, y))
+            elif value is "D":
+                floor_object = Door((x, y), self)
+                self.door_list.append((x, y))
 
             if floor_object:
                 self.grid.place_agent(floor_object, (x, y))
@@ -56,12 +70,17 @@ class FireEvacuation(Model):
         for agent, x, y in self.grid.coord_iter():
             pos = (x, y)
 
-            if not agent:
+            # If the location is empty, or a door
+            if not agent or isinstance(agent, Door):
                 neighbors = self.grid.get_neighborhood(pos, moore=True, include_center=True, radius=1)
                 for neighbor in neighbors:
                     contents = self.grid.get_cell_list_contents(neighbor)
-                    if not contents:
-                        self.graph.add_edge(pos, neighbor)
+
+                    # If there is contents at this location and they are not Doors or FireExits, skip them
+                    if contents and not any(isinstance(furniture, Door) or isinstance(furniture, FireExit) for furniture in contents):
+                        break
+
+                    self.graph.add_edge(pos, neighbor)
 
         self.datacollector = DataCollector(
             {"Alive": lambda m: self.count_human_status(m, "alive"),
@@ -85,12 +104,26 @@ class FireEvacuation(Model):
 
         self.running = True
 
+    def start_fire(self):
+        rand = random.random()
+        if rand < self.fire_probability:
+            fire_furniture = random.choice(self.furniture_list)
+            fire = Fire(fire_furniture, self)
+            self.grid.place_agent(fire, fire_furniture)
+            self.schedule.add(fire)
+            self.fire_started = True
+            print("Fire started at:", fire_furniture)
+
     def step(self):
         """
         Advance the model by one step.
         """
         self.schedule.step()
         self.datacollector.collect(self)
+
+        # If there's no fire yet, attempt to start one
+        if not self.fire_started:
+            self.start_fire()
 
         # Halt if no more agents alive
         if self.count_human_status(self, "alive") == 0:

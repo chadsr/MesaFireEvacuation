@@ -5,7 +5,7 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 
 from .model import FireEvacuation
-from .agent import FireExit, Wall, Furniture, Fire, Smoke, Human, Sight
+from .agent import FireExit, Wall, Furniture, Fire, Smoke, Human, Sight, Door, DeadHuman
 
 
 def fire_evacuation_portrayal(agent):
@@ -33,12 +33,20 @@ def fire_evacuation_portrayal(agent):
         portrayal["Shape"] = "fire_evacuation/resources/fire_exit.png"
         portrayal["scale"] = 1
         portrayal["Layer"] = 1
+    elif type(agent) is Door:
+        portrayal["Shape"] = "fire_evacuation/resources/door.png"
+        portrayal["scale"] = 1
+        portrayal["Layer"] = 1
     elif type(agent) is Wall:
         portrayal["Shape"] = "fire_evacuation/resources/wall.png"
         portrayal["scale"] = 1
         portrayal["Layer"] = 1
     elif type(agent) is Furniture:
         portrayal["Shape"] = "fire_evacuation/resources/furniture.png"
+        portrayal["scale"] = 1
+        portrayal["Layer"] = 1
+    elif type(agent) is DeadHuman:
+        portrayal["Shape"] = "fire_evacuation/resources/dead.png"
         portrayal["scale"] = 1
         portrayal["Layer"] = 1
     elif type(agent) is Sight:
@@ -61,8 +69,9 @@ floor_plans = [f for f in listdir("fire_evacuation/floorplans") if path.isfile(p
 model_params = {
     "floor_plan_file": UserSettableParameter("choice", "Floorplan", value=floor_plans[0], choices=floor_plans),
     "human_count": UserSettableParameter("number", "Number Of Human Agents", value=10),
-    "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False),
-    "collaboration_factor": UserSettableParameter("slider", "Collaboration Factor", value=10, min_value=0, max_value=10, step=1)
+    "collaboration_factor": UserSettableParameter("slider", "Collaboration Factor", value=10, min_value=0, max_value=10, step=1),
+    "fire_probability": UserSettableParameter("slider", "Probability of Fire", value=0.1, min_value=0, max_value=1, step=0.01),
+    "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False)
 }
 server = ModularServer(FireEvacuation, [canvas_element, human_chart], "Fire Evacuation",
                        model_params)
