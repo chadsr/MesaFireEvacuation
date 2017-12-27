@@ -250,6 +250,7 @@ class Human(Agent):
         self.previous_pos = None
         self.health = 1.0
         self.mobility = 1
+        self.shock = 0
         self.speed = speed
         self.vision = vision
         self.collaboration = collaboration
@@ -258,7 +259,7 @@ class Human(Agent):
         self.role = role
         self.experience = experience
         self.escaped = False
-        self.planned_target = None  # The location (agent, (x, y)) the agent is planning to move to
+        self.planned_target = (None, None)  # The location (agent, (x, y)) the agent is planning to move to
 
         # An empty set representing what the agent knows of the floor plan
         self.known_tiles = set()
@@ -295,7 +296,7 @@ class Human(Agent):
                     sight_object = Sight(tile, self.model)
                     self.model.grid.place_agent(sight_object, tile)
 
-        return visible_neighborhood
+        return list(visible_neighborhood)
 
     def get_random_target(self, allow_visited=True):
         graph_nodes = self.model.graph.nodes()
@@ -306,13 +307,13 @@ class Human(Agent):
         if not allow_visited:
             tiles -= self.visited_tiles
 
-        while not self.planned_target:
+        while not self.planned_target[1]:
             target_contents, target_pos = random.choice(list(tiles))
             if target_pos in graph_nodes and target_pos != self.pos:
-                self.planned_target = target_contents, target_pos
+                self.planned_target = (target_contents, target_pos)
 
     def attempt_exit_plan(self, visible_tiles):
-        self.planned_target = None
+        self.planned_target = (None, None)
         fire_exits = set()
 
         for contents, pos in self.known_tiles:
@@ -327,7 +328,7 @@ class Human(Agent):
                     length = len(get_line(self.pos, exit_pos))  # Let's use Bresenham's to find the 'closest' exit
                     if not best_distance or length < best_distance:
                         best_distance = length
-                        self.planned_target = exit, exit_pos
+                        self.planned_target = (exit, exit_pos)
 
             else:
                 self.planned_target = fire_exits.pop()
@@ -338,20 +339,19 @@ class Human(Agent):
                 for agent in contents:
                     if isinstance(agent, Door) and pos not in self.visited_tiles:
                         # print("FOUND NEW DOOR IN SIGHT INSTEAD")
-                        self.planned_target = agent, pos
+                        self.planned_target = (agent, pos)
                         break
-                    elif self.planned_target:
+                    elif self.planned_target[1]:
                         break
 
             # Still didn't find a planned_target, so get a random unvisited target
-            if not self.planned_target:
+            if not self.planned_target[1]:
                 self.get_random_target(allow_visited=False)
 
     def get_panic_score(self):
-        health_component = (1 / np.exp(self.health * 4))
-        experience_component = (1 / np.exp(self.experience / 2))
-        nervousness_component = (self.nervousness / 10)
-        panic_score = health_component * experience_component * nervousness_component
+        health_component = (1 / np.exp(self.health / self.nervousness))
+        experience_component = (1 / np.exp(self.experience / self.nervousness))
+        panic_score = health_component * experience_component
 
         return panic_score
 
@@ -360,6 +360,7 @@ class Human(Agent):
         self.model.grid.remove_agent(self)
         dead_self = DeadHuman(pos, self.model)
         self.model.grid.place_agent(dead_self, pos)
+        print("Agent died at", pos)
 
     def health_mobility_rules(self):
         moore_neighborhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=True, radius=1)
@@ -368,11 +369,12 @@ class Human(Agent):
             if isinstance(agent, Fire):
                 self.health -= 0.2
                 self.speed -= 2
-                print("Agent got burnt!")
             elif isinstance(agent, Smoke):
-                self.health -= 0.1
-                self.speed -= 1
-                print("Agent got hurt by smoke!")
+                self.health -= 0.01
+
+                # Start to slow the agent when they drop below 50% health
+                if self.health < 0.5:
+                    self.speed -= 1
 
         # Prevent health and speed from going below 0
         if self.health < 0:
@@ -385,17 +387,26 @@ class Human(Agent):
         elif self.speed == 0:
             self.mobility = 0
 
-    def panic_rules(self):
+    def panic_rules(self, visible_tiles):
+        for agent, pos in visible_tiles:
+            if isinstance(agent, Fire):
+                print("FIRE AAAH")
+            elif isinstance(agent, Smoke):
+                print("SMOKE AAAH")
+            elif isinstance(agent, DeadHuman):
+                print("DEAD AAAH")
+
+        if self.shock > 0:
+            pass
+
         panic_score = self.get_panic_score()
         # print("Panic score:", panic_score)
 
-        if panic_score > 0.75:
-            print("Agent is panicking!")
+        if panic_score > 0.75 and self.mobility == 1:
+            print("Agent is panicking! ", panic_score)
             self.mobility = 2
 
-    def learn_environment(self):
-        visible_tiles = self.get_visible_tiles()
-
+    def learn_environment(self, visible_tiles):
         new_tiles = 0
         for agent, pos in visible_tiles:
             if (agent, pos) not in self.known_tiles:
@@ -407,8 +418,6 @@ class Human(Agent):
         new_knowledge_percentage = new_tiles / total_tiles
         self.knowledge = self.knowledge + new_knowledge_percentage
         # print("Current knowledge:", self.knowledge)
-
-        return visible_tiles
 
     def check_for_collaboration(self, visible_tiles):
         for agent, location in visible_tiles:
@@ -423,98 +432,130 @@ class Human(Agent):
         try:
             length = len(path)
             if length <= self.speed:
-                return path[length - 1]
+                next_location = path[length - 1]
             else:
-                return path[self.speed]
+                next_location = path[self.speed]
+
+            next_path = []
+            for location in path:
+                next_path.append(location)
+                if location == next_location:
+                    break
+
+            return (next_location, next_path)
         except Exception as e:
             print("Failed to get next location:", e, "\nPath:", path, length, "Speed:", self.speed)
             sys.exit(1)
 
-    def tile_available(self, tile):
-        pass
-
     def get_path(self, graph, visible_tiles, target):
-        # If the target location is visible, do a shortest path. else roughly wander in the right direction
-        planned_contents, planned_pos = self.planned_target
-
         try:
-            if planned_pos in visible_tiles:
+            if target in visible_tiles:
                 # print("PLANNED POS IS VISIBLE")
-                return nx.shortest_path(graph, self.pos, planned_pos)
+                return nx.shortest_path(graph, self.pos, target)
             else:
                 # print("PLANNED POS IS NOT VISIBLE")
                 # TODO: Replace with something more humanly (less efficient)
-                return nx.shortest_path(graph, self.pos, planned_pos)
+                return nx.shortest_path(graph, self.pos, target)
         except nx.exception.NodeNotFound as e:
             graph_nodes = graph.nodes()
 
-            if planned_pos not in graph_nodes:
-                print("Target node not found!", planned_pos, planned_contents)
+            if target not in graph_nodes:
+                contents = self.model.grid.get_cell_list_contents(target)
+                print("Target node not found!", target, contents)
                 return None
             elif self.pos not in graph_nodes:
-                print("Current position not found!", self.pos)
-                return None
+                contents = self.model.grid.get_cell_list_contents(self.pos)
+                print("Current position not found!", self.pos, contents)
+                sys.exit(1)
             else:
                 print(e)
                 sys.exit(1)
         except nx.exception.NetworkXNoPath as e:
-            print("No path between nodes!", self.pos, planned_pos, planned_contents)
+            print("No path between nodes!", self.pos, target)
             return None
 
     def move_toward_target(self, visible_tiles):
         next_location = None
-        graph = self.model.graph
+        graph = deepcopy(self.model.graph)
 
-        while self.planned_target and not next_location:
-            path = self.get_path(graph, visible_tiles, self.planned_target)
+        while self.planned_target[1] and not next_location:
+            path = self.get_path(graph, visible_tiles, self.planned_target[1])
 
             if path:
-                next_location = self.get_next_location(path)
+                next_location, next_path = self.get_next_location(path)
+                path_contents = self.model.grid.get_cell_list_contents(next_path)
+
+                for agent in path_contents:
+                    if isinstance(agent, Smoke) or isinstance(agent, Fire):
+                        # There's a danger in the path, so try and retreat in the opposite direction
+                        x, y = self.pos
+                        next_x, next_y = next_location
+                        diff_x = x - next_x
+                        diff_y = y - next_y
+                        retreat_location = (sum([x, diff_x]), sum([y, diff_y]))
+
+                        print(retreat_location, self.model.grid.out_of_bounds(retreat_location))
+                        self.planned_target = (None, retreat_location)
+                        break
 
                 if self.model.grid.is_cell_empty(next_location) or next_location in self.model.door_list:
                     self.previous_pos = self.pos
                     self.model.grid.move_agent(self, next_location)
                     self.visited_tiles.add(next_location)
                 else:
-                    print("\nCell not empty!\nLocation:", self.pos, "\nNext Location:", next_location, "\nTarget:", self.planned_target, "\nPath:", path, "\n")
-                    graph = deepcopy(graph)  # Make a deepcopy so we can edit it without affecting the original graph
+                    # print("\nCell not empty!\nLocation:", self.pos, "\nNext Location:", next_location, "\nTarget:", self.planned_target, "\nPath:", path, "\n")
                     graph.remove_node(next_location)  # Remove the next location from the temporary graph so we can try pathing again without it
-                    # Next location is blocked, so find another route to target
-                    next_location = None
+                    # print("Pruned node", next_location)
+                    # Next location is blocked, so remove it and find another
+                    # Also remove planned_target is that was the next location and break out of movement
+                    if next_location == self.planned_target[1]:
+                        next_location = None
+                        self.planned_target = (None, None)
+                        break
+                    else:
+                        next_location = None
 
-                _, planned_pos = self.planned_target
-                if self.pos == planned_pos:
+                if self.pos == self.planned_target[1]:
                     # The human reached their target!
-                    self.planned_target = None
+                    self.planned_target = (None, None)
+                    break
             else:
-                print("Target location dropped")
-                self.planned_target = None
+                # print("Target location dropped")
+                self.planned_target = (None, None)
+                break
 
     def step(self):
         if not self.escaped and self.pos:
             self.health_mobility_rules()
 
             if self.health > 0:
-                self.panic_rules()
-                visible_tiles = self.learn_environment()
+                visible_tiles = self.get_visible_tiles()
+
+                self.panic_rules(visible_tiles)
+
+                self.learn_environment(visible_tiles)
+
+                planned_agent = self.planned_target[0]
 
                 # If a fire has started, attempt to plan an exit location
-                if self.model.fire_started:
+                if self.model.fire_started and not isinstance(planned_agent, FireExit):
                     self.attempt_exit_plan(visible_tiles)
 
                 # Check if anything in vision can be collaborated with
                 self.check_for_collaboration(visible_tiles)
 
-                if not self.planned_target:
+                planned_pos = self.planned_target[1]
+                if not planned_pos:
                     self.get_random_target()
 
                 if self.mobility == 0:
-                    print("Agent is incapacitated!")
+                    # print("Agent is incapacitated!")
+                    pass
                 if self.mobility == 1:
                     self.move_toward_target(visible_tiles)
                 elif self.mobility == 2:  # Panic movement
-                    print("Agent is moving in panic! AAAH!")
-                    pass
+                    # print("Agent is moving in panic! AAAH!")
+                    self.get_random_target()
 
                 # Agent reached a fire escape, proceed to exit
                 if self.pos in self.model.fire_exit_list:

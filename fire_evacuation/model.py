@@ -67,17 +67,16 @@ class FireEvacuation(Model):
 
         # Create a graph of traversable routes
         self.graph = nx.Graph()
-        for agent, x, y in self.grid.coord_iter():
+        for agents, x, y in self.grid.coord_iter():
             pos = (x, y)
 
             # If the location is empty, or a door
-            if not agent or isinstance(agent, Door):
+            if not agents or any(isinstance(agent, Door) for agent in agents):
                 neighbors = self.grid.get_neighborhood(pos, moore=True, include_center=True, radius=1)
-                for neighbor in neighbors:
-                    contents = self.grid.get_cell_list_contents(neighbor)
 
+                for neighbor in neighbors:
                     # If there is contents at this location and they are not Doors or FireExits, skip them
-                    if contents and not any(isinstance(furniture, Door) or isinstance(furniture, FireExit) for furniture in contents):
+                    if not self.grid.is_cell_empty(neighbor) and neighbor not in self.door_list:
                         break
 
                     self.graph.add_edge(pos, neighbor)
@@ -88,18 +87,22 @@ class FireEvacuation(Model):
              "Escaped": lambda m: self.count_human_status(m, "escaped")})
 
         # Place human agents randomly
-        for _ in range(0, human_count):
+        for i in range(0, human_count):
             pos = self.grid.find_empty()
 
             # Create a random human
             speed = random.randint(1, 2)
-            vision = random.randint(1, 30)
+
+            # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
+            vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
+            vision = int(np.random.choice(np.arange(1, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
+
             nervousness = random.randint(1, 10)
             experience = random.randint(1, 10)
 
             human = Human(pos, speed=speed, vision=vision, collaboration=collaboration_factor, knowledge=0, nervousness=nervousness, role=None, experience=experience, model=self)
 
-            self.grid._place_agent(pos, human)
+            self.grid.place_agent(human, pos)
             self.schedule.add(human)
 
         self.running = True

@@ -59,6 +59,7 @@ def fire_evacuation_portrayal(agent):
 
 # Was hoping floorplan could dictate the size of the grid, but seems the grid needs to be specified first :/
 canvas_element = CanvasGrid(fire_evacuation_portrayal, 50, 50, 800, 800)
+
 human_chart = ChartModule([{"Label": "Alive", "Color": "blue"},
                           {"Label": "Dead", "Color": "red"},
                           {"Label": "Escaped", "Color": "green"}])
