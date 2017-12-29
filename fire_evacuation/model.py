@@ -86,9 +86,15 @@ class FireEvacuation(Model):
                     self.graph.add_edge(pos, neighbor)
 
         self.datacollector = DataCollector(
-            {"Alive": lambda m: self.count_human_status(m, "alive"),
-             "Dead": lambda m: self.count_human_status(m, "dead"),
-             "Escaped": lambda m: self.count_human_status(m, "escaped")})
+            {
+                "Alive": lambda m: self.count_human_status(m, "alive"),
+                "Dead": lambda m: self.count_human_status(m, "dead"),
+                "Escaped": lambda m: self.count_human_status(m, "escaped"),
+                "Incapacitated": lambda m: self.count_human_mobility(m, 0),
+                "Normal": lambda m: self.count_human_mobility(m, 1),
+                "Panic": lambda m: self.count_human_mobility(m, 2)
+            }
+        )
 
         # Place human agents randomly
         for i in range(0, human_count):
@@ -99,6 +105,7 @@ class FireEvacuation(Model):
 
             if pos:
                 # Create a random human
+                health = random.randint(75, 100) / 100
                 speed = random.randint(1, 2)
 
                 # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
@@ -108,7 +115,7 @@ class FireEvacuation(Model):
                 nervousness = random.randint(10, 10)
                 experience = random.randint(1, 10)
 
-                human = Human(pos, speed=speed, vision=vision, collaboration=collaboration_factor, knowledge=0, nervousness=nervousness, role=None, experience=experience, model=self)
+                human = Human(pos, health=health, speed=speed, vision=vision, collaboration=collaboration_factor, knowledge=0, nervousness=nervousness, role=None, experience=experience, model=self)
 
                 self.grid.place_agent(human, pos)
                 self.schedule.add(human)
@@ -151,5 +158,17 @@ class FireEvacuation(Model):
         for agent in model.schedule.agents:
             if isinstance(agent, Human):
                 if agent.get_status() == status:
+                    count += 1
+        return count
+
+    @staticmethod
+    def count_human_mobility(model, mobility):
+        """
+        Helper method to count the status of Human agents in the model
+        """
+        count = 0
+        for agent in model.schedule.agents:
+            if isinstance(agent, Human):
+                if agent.get_mobility() == mobility:
                     count += 1
         return count
