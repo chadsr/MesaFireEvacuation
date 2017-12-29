@@ -393,12 +393,13 @@ class Human(Agent):
                     shock_modifier += 1.1
 
         self.shock += shock_modifier
+        if self.shock > 1:
+            self.shock = 1
 
         panic_score = self.get_panic_score()
-        # print("Panic score:", panic_score)
 
         if panic_score > 0.75 and self.mobility == 1:
-            print("Agent is panicking! ", panic_score)
+            print("Agent is panicking! Score:", panic_score, "Shock:", self.shock)
             self.mobility = 2
 
     def learn_environment(self):
