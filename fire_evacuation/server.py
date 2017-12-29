@@ -60,9 +60,13 @@ def fire_evacuation_portrayal(agent):
 # Was hoping floorplan could dictate the size of the grid, but seems the grid needs to be specified first :/
 canvas_element = CanvasGrid(fire_evacuation_portrayal, 50, 50, 800, 800)
 
-human_chart = ChartModule([{"Label": "Alive", "Color": "blue"},
-                          {"Label": "Dead", "Color": "red"},
-                          {"Label": "Escaped", "Color": "green"}])
+status_chart = ChartModule([{"Label": "Alive", "Color": "blue"},
+                            {"Label": "Dead", "Color": "red"},
+                            {"Label": "Escaped", "Color": "green"}])
+
+mobility_chart = ChartModule([{"Label": "Normal", "Color": "green"},
+                              {"Label": "Panic", "Color": "red"},
+                              {"Label": "Incapacitated", "Color": "blue"}])
 
 # Get list of available floorplans
 floor_plans = [f for f in listdir("fire_evacuation/floorplans") if path.isfile(path.join("fire_evacuation/floorplans", f))]
@@ -72,7 +76,8 @@ model_params = {
     "human_count": UserSettableParameter("number", "Number Of Human Agents", value=10),
     "collaboration_factor": UserSettableParameter("slider", "Collaboration Factor", value=10, min_value=0, max_value=10, step=1),
     "fire_probability": UserSettableParameter("slider", "Probability of Fire", value=0.1, min_value=0, max_value=1, step=0.01),
+    "random_spawn": UserSettableParameter('checkbox', 'Spawn Agents at Random Locations', value=True),
     "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False)
 }
-server = ModularServer(FireEvacuation, [canvas_element, human_chart], "Fire Evacuation",
+server = ModularServer(FireEvacuation, [canvas_element, status_chart, mobility_chart], "Fire Evacuation",
                        model_params)

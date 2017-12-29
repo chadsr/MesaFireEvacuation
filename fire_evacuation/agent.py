@@ -391,9 +391,9 @@ class Human(Agent):
         for agent, pos in visible_tiles:
             if isinstance(agent, Fire):
                 print("FIRE AAAH")
-            elif isinstance(agent, Smoke):
+            if isinstance(agent, Smoke):
                 print("SMOKE AAAH")
-            elif isinstance(agent, DeadHuman):
+            if isinstance(agent, DeadHuman):
                 print("DEAD AAAH")
 
         if self.shock > 0:
@@ -494,7 +494,9 @@ class Human(Agent):
                         diff_y = y - next_y
                         retreat_location = (sum([x, diff_x]), sum([y, diff_y]))
 
-                        print(retreat_location, self.model.grid.out_of_bounds(retreat_location))
+                        if self.model.grid.out_of_bounds(retreat_location):
+                            print("retreat location out of bounds...")
+
                         self.planned_target = (None, retreat_location)
                         break
 
@@ -548,17 +550,15 @@ class Human(Agent):
                 if not planned_pos:
                     self.get_random_target()
 
-                if self.mobility == 0:
-                    # print("Agent is incapacitated!")
-                    pass
-                if self.mobility == 1:
-                    self.move_toward_target(visible_tiles)
+                if self.mobility == 0:  # Incapacitated
+                    return
                 elif self.mobility == 2:  # Panic movement
-                    # print("Agent is moving in panic! AAAH!")
                     self.get_random_target()
 
+                self.move_toward_target(visible_tiles)
+
                 # Agent reached a fire escape, proceed to exit
-                if self.pos in self.model.fire_exit_list:
+                if self.model.fire_started and self.pos in self.model.fire_exit_list:
                     self.escaped = True
                     self.model.grid.remove_agent(self)
 

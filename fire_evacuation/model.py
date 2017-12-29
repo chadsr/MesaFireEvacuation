@@ -12,7 +12,7 @@ from .agent import Human, Wall, FireExit, Furniture, Fire, Door
 
 
 class FireEvacuation(Model):
-    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision):
+    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision, random_spawn):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
         with open(path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
@@ -43,6 +43,8 @@ class FireEvacuation(Model):
         # Used to easily see if a location is a FireExit or Door, since this needs to be done a lot
         self.fire_exit_list = []
         self.door_list = []
+        self.random_spawn = random_spawn
+        self.spawn_list = []
 
         # Load floorplan objects
         for (x, y), value in np.ndenumerate(floorplan):
@@ -60,6 +62,8 @@ class FireEvacuation(Model):
             elif value is "D":
                 floor_object = Door((x, y), self)
                 self.door_list.append((x, y))
+            elif value is "S":
+                self.spawn_list.append((x, y))
 
             if floor_object:
                 self.grid.place_agent(floor_object, (x, y))
@@ -77,7 +81,7 @@ class FireEvacuation(Model):
                 for neighbor in neighbors:
                     # If there is contents at this location and they are not Doors or FireExits, skip them
                     if not self.grid.is_cell_empty(neighbor) and neighbor not in self.door_list:
-                        break
+                        continue
 
                     self.graph.add_edge(pos, neighbor)
 
@@ -88,22 +92,28 @@ class FireEvacuation(Model):
 
         # Place human agents randomly
         for i in range(0, human_count):
-            pos = self.grid.find_empty()
+            if self.random_spawn:
+                pos = self.grid.find_empty()
+            else:
+                pos = random.choice(self.spawn_list)
 
-            # Create a random human
-            speed = random.randint(1, 2)
+            if pos:
+                # Create a random human
+                speed = random.randint(1, 2)
 
-            # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
-            vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
-            vision = int(np.random.choice(np.arange(1, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
+                # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
+                vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
+                vision = int(np.random.choice(np.arange(1, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
 
-            nervousness = random.randint(1, 10)
-            experience = random.randint(1, 10)
+                nervousness = random.randint(10, 10)
+                experience = random.randint(1, 10)
 
-            human = Human(pos, speed=speed, vision=vision, collaboration=collaboration_factor, knowledge=0, nervousness=nervousness, role=None, experience=experience, model=self)
+                human = Human(pos, speed=speed, vision=vision, collaboration=collaboration_factor, knowledge=0, nervousness=nervousness, role=None, experience=experience, model=self)
 
-            self.grid.place_agent(human, pos)
-            self.schedule.add(human)
+                self.grid.place_agent(human, pos)
+                self.schedule.add(human)
+            else:
+                print("No tile empty for human placement!")
 
         self.running = True
 
