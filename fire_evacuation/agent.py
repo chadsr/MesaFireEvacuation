@@ -449,6 +449,7 @@ class Human(Agent):
         if not self.planned_action:  # If an agent already has a planned action, they aren't able to collaborate again until it's done
             for agent, location in self.visible_tiles:
                 if isinstance(agent, Human):
+                    print("Mobility:", agent.get_mobility())
                     if agent.get_mobility() == 0:
                         # Physical collaboration
                         self.planned_target = (agent, location)  # Plan to move toward the target
@@ -620,6 +621,8 @@ class Human(Agent):
                 if self.mobility == 0:  # Incapacitated
                     return
                 elif self.mobility == 2:  # Panic movement
+                    self.planned_action = None
+                    self.planned_target = (None, None)
                     self.get_random_target()
 
                 self.move_toward_target()
