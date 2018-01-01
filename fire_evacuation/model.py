@@ -1,4 +1,5 @@
 from os import path
+import sys
 import random
 import numpy as np
 import networkx as nx
@@ -9,6 +10,21 @@ from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 
 from .agent import Human, Wall, FireExit, Furniture, Fire, Door
+
+MIN_HEALTH = 75
+MAX_HEALTH = 100
+
+MIN_SPEED = 1
+MAX_SPEED = 2
+
+MIN_NERVOUSNESS = 1
+MAX_NERVOUSNESS = 10
+
+MIN_EXPERIENCE = 1
+MAX_EXPERIENCE = 10
+
+MIN_VISION = 1
+# MAX_VISION is simply the size of the grid
 
 
 class FireEvacuation(Model):
@@ -32,6 +48,7 @@ class FireEvacuation(Model):
         self.visualise_vision = visualise_vision
         self.fire_probability = fire_probability
         self.fire_started = False  # Turns to true when a fire has started
+        self.finished = False
 
         # Set up model objects
         self.schedule = RandomActivation(self)
@@ -96,26 +113,29 @@ class FireEvacuation(Model):
             }
         )
 
-        # Place human agents randomly
         for i in range(0, human_count):
-            if self.random_spawn:
+            if self.random_spawn:  # Place human agents randomly
                 pos = self.grid.find_empty()
-            else:
+            else:  # Place human agents at specified spawn locations
                 pos = random.choice(self.spawn_list)
 
             if pos:
                 # Create a random human
-                health = random.randint(75, 100) / 100
-                speed = random.randint(1, 2)
+                health = random.randint(MIN_HEALTH, MAX_HEALTH) / 100
+                speed = random.randint(MIN_SPEED, MAX_SPEED)
 
                 # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
                 vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
-                vision = int(np.random.choice(np.arange(1, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
+                vision = int(np.random.choice(np.arange(MIN_VISION, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
 
-                nervousness = random.randint(10, 10)
-                experience = random.randint(1, 10)
+                nervousness_distribution = [0.025, 0.025, 0.05, 0.1, 0.1, 0.3, 0.2, 0.1, 0.05, 0.05]  # Distribution with slight higher weighting for above median nerovusness
+                nervousness = int(np.random.choice(range(MIN_NERVOUSNESS, MAX_NERVOUSNESS + 1), p=nervousness_distribution))  # Random choice starting at 1 and up to and including 10
+                experience = random.randint(MIN_EXPERIENCE, MAX_EXPERIENCE)
 
-                human = Human(pos, health=health, speed=speed, vision=vision, collaboration=collaboration_factor, knowledge=0, nervousness=nervousness, role=None, experience=experience, model=self)
+                belief_distribution = [0.9, 0.1]  # [Believes, Doesn't Believe]
+                believes_alarm = np.random.choice([True, False], p=belief_distribution)
+
+                human = Human(pos, health=health, speed=speed, vision=vision, collaboration=collaboration_factor, knowledge=0, nervousness=nervousness, role=None, experience=experience, believes_alarm=believes_alarm, model=self)
 
                 self.grid.place_agent(human, pos)
                 self.schedule.add(human)
@@ -138,16 +158,22 @@ class FireEvacuation(Model):
         """
         Advance the model by one step.
         """
+
+        if self.finished:
+            self.running = False
+            sys.exit(1)
+
+        # If no more agents are alive, stop the model on the next step
+        if self.count_human_status(self, "alive") == 0:
+                self.finished = True
+
         self.schedule.step()
-        self.datacollector.collect(self)
 
         # If there's no fire yet, attempt to start one
         if not self.fire_started:
             self.start_fire()
 
-        # Halt if no more agents alive
-        if self.count_human_status(self, "alive") == 0:
-            self.running = False
+        self.datacollector.collect(self)
 
     @staticmethod
     def count_human_status(model, status):
