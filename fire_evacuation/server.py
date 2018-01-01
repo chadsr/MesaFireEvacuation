@@ -18,9 +18,15 @@ def fire_evacuation_portrayal(agent):
     portrayal["y"] = y
 
     if type(agent) is Human:
-        portrayal["Shape"] = "fire_evacuation/resources/human.png"
         portrayal["scale"] = 1
         portrayal["Layer"] = 3
+
+        if agent.get_mobility() == 0:  # Incapacitated
+            portrayal["Shape"] = "fire_evacuation/resources/incapacitated_human.png"
+        elif agent.get_mobility() == 2:  # Panicked
+            portrayal["Shape"] = "fire_evacuation/resources/panicked_human.png"
+        else:  # Normal
+            portrayal["Shape"] = "fire_evacuation/resources/human.png"
     elif type(agent) is Fire:
         portrayal["Shape"] = "fire_evacuation/resources/fire.png"
         portrayal["scale"] = 1
@@ -77,6 +83,7 @@ model_params = {
     "collaboration_factor": UserSettableParameter("slider", "Collaboration Factor", value=10, min_value=0, max_value=10, step=1),
     "fire_probability": UserSettableParameter("slider", "Probability of Fire", value=0.1, min_value=0, max_value=1, step=0.01),
     "random_spawn": UserSettableParameter('checkbox', 'Spawn Agents at Random Locations', value=True),
+    "multithreaded": UserSettableParameter('checkbox', 'Use Multithreading', value=False),
     "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False)
 }
 server = ModularServer(FireEvacuation, [canvas_element, status_chart, mobility_chart], "Fire Evacuation",

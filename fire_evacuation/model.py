@@ -9,6 +9,7 @@ from mesa.datacollection import DataCollector
 from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 
+from .scheduler import MultithreadedRandomActivation
 from .agent import Human, Wall, FireExit, Furniture, Fire, Door
 
 MIN_HEALTH = 75
@@ -28,7 +29,7 @@ MIN_VISION = 1
 
 
 class FireEvacuation(Model):
-    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision, random_spawn):
+    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision, random_spawn, multithreaded):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
         with open(path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
@@ -51,7 +52,11 @@ class FireEvacuation(Model):
         self.finished = False
 
         # Set up model objects
-        self.schedule = RandomActivation(self)
+        if multithreaded:
+            self.schedule = MultithreadedRandomActivation(self)
+        else:
+            self.schedule = RandomActivation(self)
+
         self.grid = MultiGrid(height, width, torus=False)
 
         # Used to start a fire at a random furniture location
@@ -159,14 +164,6 @@ class FireEvacuation(Model):
         Advance the model by one step.
         """
 
-        if self.finished:
-            self.running = False
-            sys.exit(1)
-
-        # If no more agents are alive, stop the model on the next step
-        if self.count_human_status(self, "alive") == 0:
-                self.finished = True
-
         self.schedule.step()
 
         # If there's no fire yet, attempt to start one
@@ -174,6 +171,14 @@ class FireEvacuation(Model):
             self.start_fire()
 
         self.datacollector.collect(self)
+
+        if self.finished:
+            self.running = False
+            sys.exit(1)
+
+        # If no more agents are alive, stop the model after the next step
+        if self.count_human_status(self, "alive") == 0:
+            self.finished = True
 
     @staticmethod
     def count_human_status(model, status):
