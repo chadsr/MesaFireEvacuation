@@ -219,7 +219,7 @@ class Human(Agent):
         ...
     """
 
-    def __init__(self, pos, health, speed, vision, collaboration, knowledge, nervousness, role, experience, model):
+    def __init__(self, pos, health, speed, vision, collaboration, knowledge, nervousness, role, experience, believes_alarm, model):
         super().__init__(pos, model)
         self.traversable = False
 
@@ -239,6 +239,7 @@ class Human(Agent):
         self.nervousness = nervousness
         self.role = role
         self.experience = experience
+        self.believes_alarm = believes_alarm  # Boolean stating whether or not the agent believes the alarm is a real fire
         self.escaped = False
         self.planned_target = (None, None)  # The location (agent, (x, y)) the agent is planning to move to
         self.planned_action = None  # An action the agent intends to do when they reach their planned target {"carry", "morale"}
@@ -345,7 +346,9 @@ class Human(Agent):
     def get_panic_score(self):
         health_component = (1 / np.exp(self.health / self.nervousness))
         experience_component = (1 / np.exp(self.experience / self.nervousness))
-        panic_score = health_component * experience_component * self.shock
+        panic_score = (health_component + experience_component + self.shock) / 3  # Calculate the mean of the components
+
+        # print("Panic score:", panic_score, "Health Score:", health_component, "Experience Score:", experience_component, "Shock score:", self.shock)
 
         return panic_score
 
@@ -382,7 +385,8 @@ class Human(Agent):
             self.mobility = 0
 
     def panic_rules(self):
-        shock_modifier = -0.1  # Shock will decrease by this amount if no new shock is added
+        DEFAULT_SHOCK = -0.1
+        shock_modifier = DEFAULT_SHOCK  # Shock will decrease by this amount if no new shock is added
         for agents, pos in self.visible_tiles:
             for agent in agents:
                 if isinstance(agent, Fire):
@@ -392,9 +396,18 @@ class Human(Agent):
                 if isinstance(agent, DeadHuman):
                     shock_modifier += 1.1
 
+        # If the agent's shock value increased and they didn't believe the alarm before, they now do believe it
+        if not self.believes_alarm and shock_modifier != DEFAULT_SHOCK:
+            print("Agent now believes the fire is real!")
+            self.believes_alarm = True
+
         self.shock += shock_modifier
+
+        # Keep the shock value between 0 and 1
         if self.shock > 1:
             self.shock = 1
+        elif self.shock < 0:
+            self.shock = 0
 
         panic_score = self.get_panic_score()
 
@@ -419,6 +432,7 @@ class Human(Agent):
     def get_collaboration_cost(self):
         panic_score = self.get_panic_score()
         collaboration_cost = 1 / np.exp(self.collaboration_count / self.collaboration_factor) * panic_score
+        print("Collaboration cost:", collaboration_cost, "Panic score:", panic_score)
         return collaboration_cost
 
     def test_collaboration(self):
@@ -592,8 +606,8 @@ class Human(Agent):
 
                 planned_agent = self.planned_target[0]
 
-                # If a fire has started, attempt to plan an exit location if we haven't already
-                if self.model.fire_started and not isinstance(planned_agent, FireExit):
+                # If a fire has started and the agent believes it, attempt to plan an exit location if we haven't already
+                if self.model.fire_started and self.believes_alarm and not isinstance(planned_agent, FireExit):
                     self.attempt_exit_plan()
 
                 # Check if anything in vision can be collaborated with
