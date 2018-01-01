@@ -20,7 +20,7 @@ def fire_evacuation_portrayal(agent):
     if type(agent) is Human:
         portrayal["Shape"] = "fire_evacuation/resources/human.png"
         portrayal["scale"] = 1
-        portrayal["Layer"] = 1
+        portrayal["Layer"] = 3
     elif type(agent) is Fire:
         portrayal["Shape"] = "fire_evacuation/resources/fire.png"
         portrayal["scale"] = 1
@@ -48,7 +48,7 @@ def fire_evacuation_portrayal(agent):
     elif type(agent) is DeadHuman:
         portrayal["Shape"] = "fire_evacuation/resources/dead.png"
         portrayal["scale"] = 1
-        portrayal["Layer"] = 1
+        portrayal["Layer"] = 3
     elif type(agent) is Sight:
         portrayal["Shape"] = "fire_evacuation/resources/eye.png"
         portrayal["scale"] = 0.8
