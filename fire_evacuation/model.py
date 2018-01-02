@@ -11,23 +11,23 @@ from mesa.time import RandomActivation
 from .scheduler import MultithreadedRandomActivation
 from .agent import Human, Wall, FireExit, Furniture, Fire, Door
 
-MIN_HEALTH = 75
-MAX_HEALTH = 100
-
-MIN_SPEED = 1
-MAX_SPEED = 2
-
-MIN_NERVOUSNESS = 1
-MAX_NERVOUSNESS = 10
-
-MIN_EXPERIENCE = 1
-MAX_EXPERIENCE = 10
-
-MIN_VISION = 1
-# MAX_VISION is simply the size of the grid
-
 
 class FireEvacuation(Model):
+    MIN_HEALTH = 75
+    MAX_HEALTH = 100
+
+    MIN_SPEED = 1
+    MAX_SPEED = 2
+
+    MIN_NERVOUSNESS = 1
+    MAX_NERVOUSNESS = 10
+
+    MIN_EXPERIENCE = 1
+    MAX_EXPERIENCE = 10
+
+    MIN_VISION = 1
+    # MAX_VISION is simply the size of the grid
+
     def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision, random_spawn, multithreaded):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
@@ -128,16 +128,17 @@ class FireEvacuation(Model):
 
             if pos:
                 # Create a random human
-                health = random.randint(MIN_HEALTH, MAX_HEALTH) / 100
-                speed = random.randint(MIN_SPEED, MAX_SPEED)
+                health = random.randint(self.MIN_HEALTH, self.MAX_HEALTH) / 100
+                speed = random.randint(self.MIN_SPEED, self.MAX_SPEED)
 
                 # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
                 vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
-                vision = int(np.random.choice(np.arange(MIN_VISION, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
+                vision = int(np.random.choice(np.arange(self.MIN_VISION, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
 
                 nervousness_distribution = [0.025, 0.025, 0.1, 0.1, 0.1, 0.3, 0.2, 0.1, 0.025, 0.025]  # Distribution with slight higher weighting for above median nerovusness
-                nervousness = int(np.random.choice(range(MIN_NERVOUSNESS, MAX_NERVOUSNESS + 1), p=nervousness_distribution))  # Random choice starting at 1 and up to and including 10
-                experience = random.randint(MIN_EXPERIENCE, MAX_EXPERIENCE)
+                nervousness = int(np.random.choice(range(self.MIN_NERVOUSNESS, self.MAX_NERVOUSNESS + 1), p=nervousness_distribution))  # Random choice starting at 1 and up to and including 10
+
+                experience = random.randint(self.MIN_EXPERIENCE, self.MAX_EXPERIENCE)
 
                 belief_distribution = [0.9, 0.1]  # [Believes, Doesn't Believe]
                 believes_alarm = np.random.choice([True, False], p=belief_distribution)
