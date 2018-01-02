@@ -367,7 +367,7 @@ class Human(Agent):
                 self.health -= 0.2
                 self.speed -= 2
             elif isinstance(agent, Smoke):
-                self.health -= 0.01
+                self.health -= 0.005
 
                 # Start to slow the agent when they drop below 50% health
                 if self.health < 0.5:
@@ -449,9 +449,12 @@ class Human(Agent):
             return False
 
     def check_for_collaboration(self):
-        if not self.planned_action:  # If an agent already has a planned action, they aren't able to collaborate again until it's done
-            for agent, location in self.visible_tiles:
-                if isinstance(agent, Human):
+        for agents, location in self.visible_tiles:
+            if self.planned_action:
+                break
+
+            for agent in agents:
+                if isinstance(agent, Human) and not self.planned_action:
                     print("Mobility:", agent.get_mobility())
                     if agent.get_mobility() == 0:
                         # Physical collaboration
@@ -614,8 +617,9 @@ class Human(Agent):
                 if self.model.fire_started and self.believes_alarm and not isinstance(planned_agent, FireExit):
                     self.attempt_exit_plan()
 
-                # Check if anything in vision can be collaborated with
-                self.check_for_collaboration()
+                # Check if anything in vision can be collaborated with, if the agent has normal mobility
+                if self.mobility == 1:
+                    self.check_for_collaboration()
 
                 planned_pos = self.planned_target[1]
                 if not planned_pos:
