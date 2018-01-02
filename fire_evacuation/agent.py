@@ -328,7 +328,7 @@ class Human(Agent):
             else:
                 self.planned_target = fire_exits.pop()
 
-            print("Agent found a fire escape!", self.planned_target)
+            # print("Agent found a fire escape!", self.planned_target)
         else:  # If there's a fire and no fire-escape in sight, try to head for an unvisited door, if no door in sight, move randomly (for now)
             for contents, pos in self.visible_tiles:
                 for agent in contents:
@@ -411,9 +411,12 @@ class Human(Agent):
 
         panic_score = self.get_panic_score()
 
-        if panic_score > 0.75 and self.mobility == 1:
+        if panic_score >= 0.8 and self.mobility == 1:
             print("Agent is panicking! Score:", panic_score, "Shock:", self.shock)
             self.mobility = 2
+        elif panic_score < 0.8 and self.mobility == 2:
+            print("Agent stopped panicking! Score:", panic_score, "Shock:", self.shock)
+            self.mobility = 1
 
     def learn_environment(self):
         if self.knowledge < 1:  # If there is still something to learn
@@ -620,10 +623,11 @@ class Human(Agent):
 
                 if self.mobility == 0:  # Incapacitated
                     return
-                elif self.mobility == 2:  # Panic movement
-                    self.planned_action = None
-                    self.planned_target = (None, None)
-                    self.get_random_target()
+                elif self.mobility == 2:  # Panic
+                    if random.random() < self.get_panic_score():  # Test their panic score to see if they will move randomly, or keep their original target
+                        self.planned_action = None
+                        self.planned_target = (None, None)
+                        self.get_random_target()
 
                 self.move_toward_target()
 
