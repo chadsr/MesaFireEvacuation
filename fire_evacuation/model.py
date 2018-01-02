@@ -1,5 +1,4 @@
 from os import path
-import sys
 import random
 import numpy as np
 import networkx as nx
@@ -133,7 +132,7 @@ class FireEvacuation(Model):
                 vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
                 vision = int(np.random.choice(np.arange(MIN_VISION, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
 
-                nervousness_distribution = [0.025, 0.025, 0.05, 0.1, 0.1, 0.3, 0.2, 0.1, 0.05, 0.05]  # Distribution with slight higher weighting for above median nerovusness
+                nervousness_distribution = [0.025, 0.025, 0.1, 0.1, 0.1, 0.3, 0.2, 0.1, 0.025, 0.025]  # Distribution with slight higher weighting for above median nerovusness
                 nervousness = int(np.random.choice(range(MIN_NERVOUSNESS, MAX_NERVOUSNESS + 1), p=nervousness_distribution))  # Random choice starting at 1 and up to and including 10
                 experience = random.randint(MIN_EXPERIENCE, MAX_EXPERIENCE)
 
@@ -174,7 +173,6 @@ class FireEvacuation(Model):
 
         if self.finished:
             self.running = False
-            sys.exit(1)
 
         # If no more agents are alive, stop the model after the next step
         if self.count_human_status(self, "alive") == 0:
