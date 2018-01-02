@@ -1,10 +1,25 @@
+from line_profiler import LineProfiler  # TODO: Remove from final
+
 import networkx as nx
 import numpy as np
 import sys
 import random
-from copy import deepcopy
 
 from mesa import Agent
+
+
+def do_profile():
+        def inner(func):
+            def profiled_func(*args, **kwargs):
+                try:
+                    profiler = LineProfiler()
+                    profiler.add_function(func)
+                    profiler.enable_by_count()
+                    return func(*args, **kwargs)
+                finally:
+                    profiler.print_stats()
+            return profiled_func
+        return inner
 
 
 # Credits to http://www.roguebasin.com/index.php?title=Bresenham%27s_Line_Algorithm
@@ -632,7 +647,7 @@ class Human(Agent):
 
     def move_toward_target(self):
         next_location = None
-        graph = deepcopy(self.model.graph)
+        pruned_edges = set()
 
         self.update_target()  # Get the latest location of a target, if it still exists
         if self.planned_action:  # And if there's an action, check if it's still possible
@@ -640,9 +655,9 @@ class Human(Agent):
 
         while self.planned_target[1] and not next_location:
             if self.location_is_traversable(self.planned_target[1]):  # Target is traversable
-                path = self.get_path(graph, self.planned_target[1])
+                path = self.get_path(self.model.graph, self.planned_target[1])
             else:  # Target is not traversable (e.g. we are going to another Human), so don't include target in the path
-                path = self.get_path(graph, self.planned_target[1], include_target=False)
+                path = self.get_path(self.model.graph, self.planned_target[1], include_target=False)
 
             if path:
                 next_location, next_path = self.get_next_location(path)  # The final location and path traversed to said location in this step
@@ -667,7 +682,9 @@ class Human(Agent):
 
                 else:  # We want to move here but it's blocked, so remove this node from the traversable graph
                     # Remove the next location from the temporary graph so we can try pathing again without it
-                    graph.remove_node(next_location)
+                    edges = self.model.graph.edges(next_location)
+                    pruned_edges.update(edges)
+                    self.model.graph.remove_node(next_location)
 
                     # Reset planned_target if the next location was the end of the path
                     if next_location == path[-1]:
@@ -681,6 +698,11 @@ class Human(Agent):
                 self.planned_target = (None, None)
                 break
 
+        if pruned_edges:
+            # Add back the edges we removed when removing any non-traversable nodes from the global graph, because they may be traversable again next step
+            self.model.graph.add_edges_from(list(pruned_edges))
+
+    @do_profile()
     def step(self):
         if not self.escaped and self.pos:
             self.health_mobility_rules()
