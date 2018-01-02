@@ -239,6 +239,8 @@ class Human(Agent):
         self.morale_collaboration_count = 0
         self.physical_collaboration_count = 0
 
+        self.morale_boost = False
+
         self.knowledge = knowledge
         self.nervousness = nervousness
         self.role = role
@@ -480,19 +482,19 @@ class Human(Agent):
 
                 for agent in visible_agents:
                     if isinstance(agent, Human) and not self.planned_action:
-                        if agent.get_mobility() == 0:
+                        if agent.get_mobility() == 0:  # If the agent is incapacitated, help them
                             # Physical collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = "carry"  # Plan to carry the agent
                             self.physical_collaboration_count += 1
-                            print("Agent planned physical collaboration at", location)
+                            # print("Agent planned physical collaboration at", location)
                             break
                         elif agent.get_mobility() == 2 and not self.planned_action:
                             # Morale collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = "morale"  # Plan to carry the agent
                             self.morale_collaboration_count += 1
-                            print("Agent planned morale collaboration at", location)
+                            # print("Agent planned morale collaboration at", location)
                             break
                     elif isinstance(agent, FireExit):
                         # Verbal collaboration
@@ -518,15 +520,18 @@ class Human(Agent):
             print("Failed to get next location:", e, "\nPath:", path, length, "Speed:", self.speed)
             sys.exit(1)
 
-    def get_path(self, graph, target):
+    def get_path(self, graph, target, include_target=True):
         try:
-            if target in self.visible_tiles:
-                # print("PLANNED POS IS VISIBLE")
-                return nx.shortest_path(graph, self.pos, target)
-            else:
-                # print("PLANNED POS IS NOT VISIBLE")
+            if target in self.visible_tiles:  # Target is visible, so simply take the shortest path
+                path = nx.shortest_path(graph, self.pos, target)
+            else:  # Target is not visible, so do less efficient pathing
                 # TODO: Replace with something more humanly (less efficient)
-                return nx.shortest_path(graph, self.pos, target)
+                path = nx.shortest_path(graph, self.pos, target)
+
+                if not include_target:
+                    del path[-1]  # We don't want the target included in the path, so delete the last element
+
+            return path
         except nx.exception.NodeNotFound as e:
             graph_nodes = graph.nodes()
 
@@ -557,9 +562,9 @@ class Human(Agent):
     def check_retreat(self, next_path, next_location):
         # Get the contents of any visible locations in the next path
         visible_path = []
-        for location in next_path:
-            if location in self.visible_tiles:
-                visible_path.append(location)
+        for visible_agent, visible_pos in self.visible_tiles:
+                if visible_pos in next_path:
+                    visible_path.append(visible_pos)
 
         visible_contents = self.model.grid.get_cell_list_contents(visible_path)
         for agent in visible_contents:
@@ -589,7 +594,7 @@ class Human(Agent):
                 self.planned_target = (planned_agent, current_pos)
                 # print("Target agent moved. Updating current position:", self.planned_target)
             elif not current_pos:  # Agent no longer exists
-                print("Target agent no longer exists. Dropping.", self.planned_target, current_pos)
+                # print("Target agent no longer exists. Dropping.", self.planned_target, current_pos)
                 self.planned_target = (None, None)
                 self.planned_action = None
 
@@ -599,15 +604,31 @@ class Human(Agent):
         if planned_agent:
             # Agent had planned morale collaboration, but the agent is no longer panicking, so drop it.
             if self.planned_action == "morale" and planned_agent.get_mobility() != 2:
+                # print("Target agent no longer panicking. Dropping action.")
                 self.planned_target = (None, None)
                 self.planned_action = None
             # Agent had planned physical collaboration, but the agent is no longer incapacitated, so drop it.
-            elif self.planned_action == "physical" and planned_agent.get_mobility() != 0:
+            elif self.planned_action == "physical" and (planned_agent.get_mobility() != 0):
+                # print("Target agent no longer incapacitated. Dropping action.")
                 self.planned_target = (None, None)
                 self.planned_action = None
         else:  # The agent no longer exists
             self.planned_target = (None, None)
             self.planned_action = None
+
+    def perform_action(self):
+        agent, _ = self.planned_target
+
+        if self.planned_action == "carry":
+            print("Agent carrying another agent")
+        elif self.planned_action == "morale":
+            # Attempt to give the agent a permanent morale boost according to your experience score
+            if agent.attempt_morale_boost(self.experience):
+                print("Morale boost succeeded")
+            else:
+                print("Morale boost failed")
+
+        self.planned_action = None
 
     def move_toward_target(self):
         next_location = None
@@ -618,7 +639,10 @@ class Human(Agent):
             self.update_action()
 
         while self.planned_target[1] and not next_location:
-            path = self.get_path(graph, self.planned_target[1])
+            if self.location_is_traversable(self.planned_target[1]):  # Target is traversable
+                path = self.get_path(graph, self.planned_target[1])
+            else:  # Target is not traversable (e.g. we are going to another Human), so don't include target in the path
+                path = self.get_path(graph, self.planned_target[1], include_target=False)
 
             if path:
                 next_location, next_path = self.get_next_location(path)  # The final location and path traversed to said location in this step
@@ -632,35 +656,27 @@ class Human(Agent):
                     self.previous_pos = self.pos
                     self.model.grid.move_agent(self, next_location)
                     self.visited_tiles.add(next_location)
+                elif self.pos == path[-1]:
+                    # The human reached their target!
+
+                    if self.planned_action:  # If they had an action to perform when they reached the target
+                        self.perform_action()
+
+                    self.planned_target = (None, None)
+                    break
+
                 else:  # We want to move here but it's blocked, so remove this node from the traversable graph
                     # Remove the next location from the temporary graph so we can try pathing again without it
                     graph.remove_node(next_location)
 
-                    # Also remove planned_target if that was the next location and break out of movement
-                    if next_location == self.planned_target[1]:
+                    # Reset planned_target if the next location was the end of the path
+                    if next_location == path[-1]:
                         next_location = None
                         self.planned_target = (None, None)
                         break
                     else:
                         next_location = None
 
-                if self.pos == self.planned_target[1]:
-                    # The human reached their target!
-
-                    if self.planned_action:  # If they had an action to perform when they reached the target
-                        agent = self.planned_target[0]
-                        print(self.planned_action, agent)
-
-                        if self.planned_action == "carry":
-                            print("Agent carrying another agent")
-                        elif self.planned_action == "morale":
-                            print("Agent performed morale collaboration")
-                            agent.set_shock(0)
-
-                        self.planned_action = None
-
-                    self.planned_target = (None, None)
-                    break
             else:  # No path is possible, so drop the target
                 self.planned_target = (None, None)
                 break
@@ -698,6 +714,10 @@ class Human(Agent):
                         self.planned_action = None
                         self.planned_target = (None, None)
                         self.get_random_target()
+                    elif random.random() < self.get_panic_score():  # Test their panic score again to see if they will faint
+                        print("Agent fainted")
+                        self.mobility = 0
+                        return
 
                 self.move_toward_target()
 
@@ -741,8 +761,13 @@ class Human(Agent):
 
         self.believes_alarm = value
 
-    def set_shock(self, value):
-        self.shock = value
+    def attempt_morale_boost(self, experience):
+        rand = random.random()
+        if rand < (experience / self.model.MAX_EXPERIENCE):
+            self.morale_boost = True
+            return True
+        else:
+            return False
 
     def get_verbal_collaboration_count(self):
         return self.verbal_collaboration_count
