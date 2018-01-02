@@ -433,47 +433,62 @@ class Human(Agent):
             # print("Current knowledge:", self.knowledge)
 
     def get_collaboration_cost(self):
-        panic_score = self.get_panic_score()
-        collaboration_cost = 1 / np.exp(self.collaboration_count / self.collaboration_factor) * panic_score
-        print("Collaboration cost:", collaboration_cost, "Panic score:", panic_score)
+        if self.collaboration == 0:
+            collaboration_cost = 0
+        else:
+            panic_score = self.get_panic_score()
+            collaboration_component = 1 / np.exp((self.collaboration_count + 1) / self.collaboration)
+            collaboration_cost = (collaboration_component + (1 - panic_score)) / 2
+            # print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", 1 - panic_score)
+
+        # print("Collaboration cost:", collaboration_cost)
         return collaboration_cost
 
     def test_collaboration(self):
         collaboration_cost = self.get_collaboration_cost()
 
         rand = random.random()
-        print(rand)
         if rand < collaboration_cost:
             return True
         else:
             return False
 
-    def check_for_collaboration(self):
+    def verbal_collaboration(self, target_agent, target_location):
         for agents, location in self.visible_tiles:
-            if self.planned_action:
-                break
-
             for agent in agents:
-                if isinstance(agent, Human) and not self.planned_action:
-                    print("Mobility:", agent.get_mobility())
-                    if agent.get_mobility() == 0:
-                        # Physical collaboration
-                        self.planned_target = (agent, location)  # Plan to move toward the target
-                        self.planned_action = "carry"  # Plan to carry the agent
+                if isinstance(agent, Human) and agent.get_mobility() == 1:
+                    agent_target, agent_action = agent.get_plan()
+                    if not agent_action and not isinstance(agent_target, FireExit):  # If the agent isn't planning an action and isn't already heading to a fire exit
+                        agent.set_plan(target_agent, target_location)  # Set the agent's planned_target to the target location
+                        agent.set_believes(True)  # The agent should now beleive it's real if they didn't before
+
+    def check_for_collaboration(self):
+        if self.test_collaboration():
+            for visible_agents, location in self.visible_tiles:
+                if self.planned_action:
+                    break
+
+                for agent in visible_agents:
+                    if isinstance(agent, Human) and not self.planned_action:
+                        if agent.get_mobility() == 0:
+                            # Physical collaboration
+                            self.planned_target = (agent, location)  # Plan to move toward the target
+                            self.planned_action = "carry"  # Plan to carry the agent
+                            self.collaboration_count += 1
+                            print("Agent planned physical collaboration at", location)
+                            break
+                        elif agent.get_mobility() == 2 and not self.planned_action:
+                            # Morale collaboration
+                            self.planned_target = (agent, location)  # Plan to move toward the target
+                            self.planned_action = "morale"  # Plan to carry the agent
+                            self.collaboration_count += 1
+                            print("Agent planned physical collaboration at", location)
+                            break
+                    elif isinstance(agent, FireExit):
+                        # Verbal collaboration
+                        self.verbal_collaboration(agent, location)
+                        print("Agent verbally collaborated")
                         self.collaboration_count += 1
-                        print("Agent planned physical collaboration at", location)
-                        break
-                    elif agent.get_mobility() == 2:
-                        # Morale collaboration
-                        self.planned_target = (agent, location)  # Plan to move toward the target
-                        self.planned_action = "morale"  # Plan to carry the agent
-                        self.collaboration_count += 1
-                        print("Agent planned physical collaboration at", location)
-                        break
-                elif isinstance(agent, FireExit):
-                    # Verbal collaboration
-                    print("Agent verbally collaborated")
-                    self.collaboration_count += 1
 
     def get_next_location(self, path):
         try:
@@ -604,6 +619,9 @@ class Human(Agent):
         if not self.escaped and self.pos:
             self.health_mobility_rules()
 
+            if self.mobility == 0:  # Incapacitated, so return already
+                return
+
             if self.health > 0:
                 self.visible_tiles = self.get_visible_tiles()
 
@@ -614,19 +632,17 @@ class Human(Agent):
                 planned_agent = self.planned_target[0]
 
                 # If a fire has started and the agent believes it, attempt to plan an exit location if we haven't already
-                if self.model.fire_started and self.believes_alarm and not isinstance(planned_agent, FireExit):
-                    self.attempt_exit_plan()
+                if self.model.fire_started and self.believes_alarm:
+                    if not isinstance(planned_agent, FireExit):
+                        self.attempt_exit_plan()
 
-                # Check if anything in vision can be collaborated with, if the agent has normal mobility
-                if self.mobility == 1:
-                    self.check_for_collaboration()
+                    # Check if anything in vision can be collaborated with, if the agent has normal mobility
+                    if self.mobility == 1:
+                        self.check_for_collaboration()
 
                 planned_pos = self.planned_target[1]
                 if not planned_pos:
                     self.get_random_target()
-
-                if self.mobility == 0:  # Incapacitated
-                    return
                 elif self.mobility == 2:  # Panic
                     if random.random() < self.get_panic_score():  # Test their panic score to see if they will move randomly, or keep their original target
                         self.planned_action = None
@@ -661,3 +677,16 @@ class Human(Agent):
 
     def get_position(self):
         return self.pos
+
+    def get_plan(self):
+        return (self.planned_target, self.planned_action)
+
+    def set_plan(self, agent, location):
+        self.planned_action = None
+        self.planned_target = (agent, location)
+
+    def set_believes(self, value):
+        if value and not self.believes_alarm:
+            print("Agent told to believe the alarm!")
+
+        self.believes_alarm = value
