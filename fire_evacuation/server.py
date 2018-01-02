@@ -80,7 +80,7 @@ floor_plans = [f for f in listdir("fire_evacuation/floorplans") if path.isfile(p
 model_params = {
     "floor_plan_file": UserSettableParameter("choice", "Floorplan", value=floor_plans[0], choices=floor_plans),
     "human_count": UserSettableParameter("number", "Number Of Human Agents", value=10),
-    "collaboration_factor": UserSettableParameter("slider", "Collaboration Factor", value=10, min_value=0, max_value=10, step=1),
+    "collaboration_factor": UserSettableParameter("slider", "Collaboration Factor", value=5, min_value=0, max_value=10, step=1),
     "fire_probability": UserSettableParameter("slider", "Probability of Fire", value=0.1, min_value=0, max_value=1, step=0.01),
     "random_spawn": UserSettableParameter('checkbox', 'Spawn Agents at Random Locations', value=True),
     "multithreaded": UserSettableParameter('checkbox', 'Use Multithreading', value=False),
