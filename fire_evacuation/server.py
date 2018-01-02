@@ -74,6 +74,10 @@ mobility_chart = ChartModule([{"Label": "Normal", "Color": "green"},
                               {"Label": "Panic", "Color": "red"},
                               {"Label": "Incapacitated", "Color": "blue"}])
 
+collaboration_chart = ChartModule([{"Label": "Verbal Collaboration", "Color": "yellow"},
+                                   {"Label": "Physical Collaboration", "Color": "red"},
+                                   {"Label": "Morale Collaboration", "Color": "blue"}])
+
 # Get list of available floorplans
 floor_plans = [f for f in listdir("fire_evacuation/floorplans") if path.isfile(path.join("fire_evacuation/floorplans", f))]
 
@@ -86,5 +90,6 @@ model_params = {
     "multithreaded": UserSettableParameter('checkbox', 'Use Multithreading', value=False),
     "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False)
 }
-server = ModularServer(FireEvacuation, [canvas_element, status_chart, mobility_chart], "Fire Evacuation",
+
+server = ModularServer(FireEvacuation, [canvas_element, status_chart, mobility_chart, collaboration_chart], "Fire Evacuation",
                        model_params)

@@ -113,7 +113,10 @@ class FireEvacuation(Model):
                 "Escaped": lambda m: self.count_human_status(m, "escaped"),
                 "Incapacitated": lambda m: self.count_human_mobility(m, 0),
                 "Normal": lambda m: self.count_human_mobility(m, 1),
-                "Panic": lambda m: self.count_human_mobility(m, 2)
+                "Panic": lambda m: self.count_human_mobility(m, 2),
+                "Verbal Collaboration": lambda m: self.count_human_collaboration(m, "verbal"),
+                "Physical Collaboration": lambda m: self.count_human_collaboration(m, "physical"),
+                "Morale Collaboration": lambda m: self.count_human_collaboration(m, "morale")
             }
         )
 
@@ -179,6 +182,24 @@ class FireEvacuation(Model):
             self.finished = True
 
     @staticmethod
+    def count_human_collaboration(model, collaboration_type):
+        """
+        Helper method to count the number of collaborations performed by Human agents in the model
+        """
+
+        count = 0
+        for agent in model.schedule.agents:
+            if isinstance(agent, Human):
+                if collaboration_type == "verbal":
+                    count += agent.get_verbal_collaboration_count()
+                elif collaboration_type == "morale":
+                    count += agent.get_morale_collaboration_count()
+                elif collaboration_type == "physical":
+                    count += agent.get_physical_collaboration_count()
+
+        return count
+
+    @staticmethod
     def count_human_status(model, status):
         """
         Helper method to count the status of Human agents in the model
@@ -193,7 +214,7 @@ class FireEvacuation(Model):
     @staticmethod
     def count_human_mobility(model, mobility):
         """
-        Helper method to count the status of Human agents in the model
+        Helper method to count the mobility of Human agents in the model
         """
         count = 0
         for agent in model.schedule.agents:
