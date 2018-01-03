@@ -58,7 +58,7 @@ def fire_evacuation_portrayal(agent):
     elif type(agent) is Sight:
         portrayal["Shape"] = "fire_evacuation/resources/eye.png"
         portrayal["scale"] = 0.8
-        portrayal["Layer"] = 0
+        portrayal["Layer"] = 6
 
     return portrayal
 
