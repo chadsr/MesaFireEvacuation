@@ -240,6 +240,16 @@ class Human(Agent):
         NORMAL = 1
         PANIC = 2
 
+    class Status(Enum):
+        DEAD = 0
+        ALIVE = 1
+        ESCAPED = 2
+
+    class Action(Enum):
+        PHYSICAL_SUPPORT = 0
+        MORALE_SUPPORT = 1
+        VERBAL_SUPPORT = 2
+
     MIN_HEALTH = 0
     MAX_HEALTH = 1
 
@@ -554,14 +564,14 @@ class Human(Agent):
                         if agent.get_mobility() == Human.Mobility.INCAPACITATED:  # If the agent is incapacitated, help them
                             # Physical collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
-                            self.planned_action = "carry"  # Plan to carry the agent
+                            self.planned_action = Human.Action.PHYSICAL_SUPPORT  # Plan to carry the agent
                             self.physical_collaboration_count += 1
                             # print("Agent planned physical collaboration at", location)
                             break
                         elif agent.get_mobility() == Human.Mobility.PANIC and not self.planned_action:
                             # Morale collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
-                            self.planned_action = "morale"  # Plan to carry the agent
+                            self.planned_action = Human.Action.MORALE_SUPPORT  # Plan to carry the agent
                             self.morale_collaboration_count += 1
                             # print("Agent planned morale collaboration at", location)
                             break
@@ -672,12 +682,12 @@ class Human(Agent):
 
         if planned_agent:
             # Agent had planned morale collaboration, but the agent is no longer panicking, so drop it.
-            if self.planned_action == "morale" and planned_agent.get_mobility() != Human.Mobility.PANIC:
+            if self.planned_action == Human.Action.MORALE_SUPPORT and planned_agent.get_mobility() != Human.Mobility.PANIC:
                 # print("Target agent no longer panicking. Dropping action.")
                 self.planned_target = (None, None)
                 self.planned_action = None
             # Agent had planned physical collaboration, but the agent is no longer incapacitated, so drop it.
-        elif self.planned_action == "physical" and (planned_agent.get_mobility() != Human.Mobility.INCAPACITATED):
+        elif self.planned_action == Human.Action.PHYSICAL_SUPPORT and (planned_agent.get_mobility() != Human.Mobility.INCAPACITATED):
                 # print("Target agent no longer incapacitated. Dropping action.")
                 self.planned_target = (None, None)
                 self.planned_action = None
@@ -688,9 +698,9 @@ class Human(Agent):
     def perform_action(self):
         agent, _ = self.planned_target
 
-        if self.planned_action == "carry":
+        if self.planned_action == Human.Action.PHYSICAL_SUPPORT:
             print("Agent carrying another agent")
-        elif self.planned_action == "morale":
+        elif self.planned_action == Human.Action.MORALE_SUPPORT:
             # Attempt to give the agent a permanent morale boost according to your experience score
             if agent.attempt_morale_boost(self.experience):
                 print("Morale boost succeeded")
@@ -804,11 +814,11 @@ class Human(Agent):
 
     def get_status(self):
         if self.health > self.MIN_HEALTH and not self.escaped:
-            return "alive"
+            return Human.Status.ALIVE
         elif self.health <= self.MIN_HEALTH and not self.escaped:
-            return "dead"
+            return Human.Status.DEAD
         elif self.escaped:
-            return "escaped"
+            return Human.Status.ESCAPED
 
         return None
 

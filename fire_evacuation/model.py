@@ -108,15 +108,15 @@ class FireEvacuation(Model):
 
         self.datacollector = DataCollector(
             {
-                "Alive": lambda m: self.count_human_status(m, "alive"),
-                "Dead": lambda m: self.count_human_status(m, "dead"),
-                "Escaped": lambda m: self.count_human_status(m, "escaped"),
+                "Alive": lambda m: self.count_human_status(m, Human.Status.ALIVE),
+                "Dead": lambda m: self.count_human_status(m, Human.Status.DEAD),
+                "Escaped": lambda m: self.count_human_status(m, Human.Status.ESCAPED),
                 "Incapacitated": lambda m: self.count_human_mobility(m, Human.Mobility.INCAPACITATED),
                 "Normal": lambda m: self.count_human_mobility(m, Human.Mobility.NORMAL),
                 "Panic": lambda m: self.count_human_mobility(m, Human.Mobility.PANIC),
-                "Verbal Collaboration": lambda m: self.count_human_collaboration(m, "verbal"),
-                "Physical Collaboration": lambda m: self.count_human_collaboration(m, "physical"),
-                "Morale Collaboration": lambda m: self.count_human_collaboration(m, "morale")
+                "Verbal Collaboration": lambda m: self.count_human_collaboration(m, Human.Action.VERBAL_SUPPORT),
+                "Physical Collaboration": lambda m: self.count_human_collaboration(m, Human.Action.PHYSICAL_SUPPORT),
+                "Morale Collaboration": lambda m: self.count_human_collaboration(m, Human.Action.MORALE_SUPPORT)
             }
         )
 
@@ -179,7 +179,7 @@ class FireEvacuation(Model):
             self.running = False
 
         # If no more agents are alive, stop the model after the next step
-        if self.count_human_status(self, "alive") == 0:
+        if self.count_human_status(self, Human.Status.ALIVE) == 0:
             self.finished = True
 
     @staticmethod
@@ -191,11 +191,11 @@ class FireEvacuation(Model):
         count = 0
         for agent in model.schedule.agents:
             if isinstance(agent, Human):
-                if collaboration_type == "verbal":
+                if collaboration_type == Human.Action.VERBAL_SUPPORT:
                     count += agent.get_verbal_collaboration_count()
-                elif collaboration_type == "morale":
+                elif collaboration_type == Human.Action.MORALE_SUPPORT:
                     count += agent.get_morale_collaboration_count()
-                elif collaboration_type == "physical":
+                elif collaboration_type == Human.Action.PHYSICAL_SUPPORT:
                     count += agent.get_physical_collaboration_count()
 
         return count
