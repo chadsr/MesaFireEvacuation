@@ -77,9 +77,9 @@ mobility_chart = ChartModule([{"Label": "Normal", "Color": "green"},
                               {"Label": "Panic", "Color": "red"},
                               {"Label": "Incapacitated", "Color": "blue"}])
 
-collaboration_chart = ChartModule([{"Label": "Verbal Collaboration", "Color": "yellow"},
+collaboration_chart = ChartModule([{"Label": "Verbal Collaboration", "Color": "orange"},
                                    {"Label": "Physical Collaboration", "Color": "red"},
-                                   {"Label": "Morale Collaboration", "Color": "blue"}])
+                                   {"Label": "Morale Collaboration", "Color": "pink"}])
 
 # Get list of available floorplans
 floor_plans = [f for f in listdir("fire_evacuation/floorplans") if path.isfile(path.join("fire_evacuation/floorplans", f))]
