@@ -301,6 +301,8 @@ class Human(Agent):
         self.physical_collaboration_count = 0
 
         self.morale_boost = False
+        self.carried = False
+        self.carrying = None
 
         self.knowledge = self.MIN_KNOWLEDGE
         self.nervousness = nervousness
@@ -465,12 +467,16 @@ class Human(Agent):
             self.speed = self.MIN_SPEED
 
         if self.health == self.MIN_HEALTH:
-
+            self.stop_carrying()
             self.die()
         elif self.speed == self.MIN_SPEED:
+            self.stop_carrying()
             self.mobility = Human.Mobility.INCAPACITATED
 
     def panic_rules(self):
+        if self.morale_boost:  # If the agent recieved a morale boost, they will not panic again
+            return
+
         shock_modifier = self.DEFAULT_SHOCK_MODIFIER  # Shock will decrease by this amount if no new shock is added
         for agents, pos in self.visible_tiles:
             for agent in agents:
@@ -498,6 +504,7 @@ class Human(Agent):
 
         if panic_score >= self.PANIC_THRESHOLD and self.mobility == Human.Mobility.NORMAL:
             print("Agent is panicking! Score:", panic_score, "Shock:", self.shock)
+            self.stop_carrying()
             self.mobility = Human.Mobility.PANIC
         elif panic_score < self.PANIC_THRESHOLD and self.mobility == Human.Mobility.PANIC:
             print("Agent stopped panicking! Score:", panic_score, "Shock:", self.shock)
@@ -554,6 +561,9 @@ class Human(Agent):
             print("Agent informed others of a fire exit!")
 
     def check_for_collaboration(self):
+        if self.carrying:  # If the agent is carrying someone, they are too occupied to do other collaboration
+            return
+
         if self.test_collaboration():
             for visible_agents, location in self.visible_tiles:
                 if self.planned_action:
@@ -686,9 +696,8 @@ class Human(Agent):
                 # print("Target agent no longer panicking. Dropping action.")
                 self.planned_target = (None, None)
                 self.planned_action = None
-            # Agent had planned physical collaboration, but the agent is no longer incapacitated, so drop it.
-        elif self.planned_action == Human.Action.PHYSICAL_SUPPORT and (planned_agent.get_mobility() != Human.Mobility.INCAPACITATED):
-                # print("Target agent no longer incapacitated. Dropping action.")
+            # Agent had planned physical collaboration, but the agent is no longer incapacitated or has already been carried, so drop it.
+            elif self.planned_action == Human.Action.PHYSICAL_SUPPORT and ((planned_agent.get_mobility() != Human.Mobility.INCAPACITATED) or planned_agent.is_carried()):
                 self.planned_target = (None, None)
                 self.planned_action = None
         else:  # The agent no longer exists
@@ -699,7 +708,10 @@ class Human(Agent):
         agent, _ = self.planned_target
 
         if self.planned_action == Human.Action.PHYSICAL_SUPPORT:
-            print("Agent carrying another agent")
+            if not agent.is_carried():
+                self.carrying = agent
+                agent.set_carried(True)
+                print("Agent started carrying another agent")
         elif self.planned_action == Human.Action.MORALE_SUPPORT:
             # Attempt to give the agent a permanent morale boost according to your experience score
             if agent.attempt_morale_boost(self.experience):
@@ -735,6 +747,10 @@ class Human(Agent):
                     self.previous_pos = self.pos
                     self.model.grid.move_agent(self, next_location)
                     self.visited_tiles.add(next_location)
+
+                    if self.carrying:
+                        self.model.grid.move_agent(self.carrying, self.pos)
+
                 elif self.pos == path[-1]:
                     # The human reached their target!
 
@@ -809,6 +825,11 @@ class Human(Agent):
 
                 # Agent reached a fire escape, proceed to exit
                 if self.model.fire_started and self.pos in self.model.fire_exit_list:
+                    if self.carrying:
+                        carried_agent = self.carrying
+                        carried_agent.escaped = True
+                        self.model.grid.remove_agent(carried_agent)
+
                     self.escaped = True
                     self.model.grid.remove_agent(self)
 
@@ -841,16 +862,36 @@ class Human(Agent):
         self.planned_action = None
         self.planned_target = (agent, location)
 
-    def set_believes(self, value):
+    def set_believes(self, value: bool):
         if value and not self.believes_alarm:
             print("Agent told to believe the alarm!")
 
         self.believes_alarm = value
 
-    def attempt_morale_boost(self, experience):
+    def attempt_morale_boost(self, experience: int):
         rand = random.random()
         if rand < (experience / self.MAX_EXPERIENCE):
             self.morale_boost = True
+            self.mobility = Human.Mobility.NORMAL
+            return True
+        else:
+            return False
+
+    def stop_carrying(self):
+        if self.carrying:
+            carried_agent = self.carrying
+            carried_agent.set_carried(False)
+            self.carrying = None
+            print("Agent stopped carrying another agent")
+
+    def set_carried(self, value: bool):
+        self.carried = value
+
+    def is_carried(self):
+        return self.carried
+
+    def is_carrying(self):
+        if self.carrying:
             return True
         else:
             return False

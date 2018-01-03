@@ -23,8 +23,11 @@ def fire_evacuation_portrayal(agent):
 
         if agent.get_mobility() == Human.Mobility.INCAPACITATED:  # Incapacitated
             portrayal["Shape"] = "fire_evacuation/resources/incapacitated_human.png"
+            portrayal["Layer"] = 6
         elif agent.get_mobility() == Human.Mobility.PANIC:  # Panicked
             portrayal["Shape"] = "fire_evacuation/resources/panicked_human.png"
+        elif agent.is_carrying():  # Carrying someone
+            portrayal["Shape"] = "fire_evacuation/resources/carrying_human.png"
         else:  # Normal
             portrayal["Shape"] = "fire_evacuation/resources/human.png"
     elif type(agent) is Fire:
@@ -58,7 +61,7 @@ def fire_evacuation_portrayal(agent):
     elif type(agent) is Sight:
         portrayal["Shape"] = "fire_evacuation/resources/eye.png"
         portrayal["scale"] = 0.8
-        portrayal["Layer"] = 6
+        portrayal["Layer"] = 7
 
     return portrayal
 
