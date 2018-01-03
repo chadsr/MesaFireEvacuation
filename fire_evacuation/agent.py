@@ -429,6 +429,7 @@ class Human(Agent):
     def health_mobility_rules(self):
         moore_neighborhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=True, radius=1)
         contents = self.model.grid.get_cell_list_contents(moore_neighborhood)
+
         for agent in contents:
             if isinstance(agent, Fire):
                 self.health -= self.HEALTH_MODIFIER_FIRE

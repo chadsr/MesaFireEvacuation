@@ -13,8 +13,8 @@ from .agent import Human, Wall, FireExit, Furniture, Fire, Door
 
 
 class FireEvacuation(Model):
-    MIN_HEALTH = 75
-    MAX_HEALTH = 100
+    MIN_HEALTH = 0.75
+    MAX_HEALTH = 1
 
     MIN_SPEED = 1
     MAX_SPEED = 2
@@ -128,7 +128,7 @@ class FireEvacuation(Model):
 
             if pos:
                 # Create a random human
-                health = random.randint(self.MIN_HEALTH, self.MAX_HEALTH) / 100
+                health = random.randint(self.MIN_HEALTH * 100, self.MAX_HEALTH * 100) / 100
                 speed = random.randint(self.MIN_SPEED, self.MAX_SPEED)
 
                 # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
