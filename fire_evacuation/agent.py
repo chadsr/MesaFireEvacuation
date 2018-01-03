@@ -782,7 +782,7 @@ class Human(Agent):
                         self.planned_action = None
                         self.planned_target = (None, None)
                         self.get_random_target()
-                    elif self.shock == self.model.random.random() < self.get_panic_score():  # Test their panic score again to see if they will faint
+                    elif self.shock == self.MAX_SHOCK and self.model.random.random() < self.get_panic_score():  # If they have maximum shock, test their panic score again to see if they will faint
                         print("Agent fainted")
                         self.mobility = Mobility.INCAPACITATED
                         return
