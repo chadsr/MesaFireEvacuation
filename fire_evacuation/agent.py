@@ -532,7 +532,7 @@ class Human(Agent):
             total_count = self.verbal_collaboration_count + self.morale_collaboration_count + self.physical_collaboration_count
             collaboration_component = 1 / np.exp((total_count + 1) / self.collaboration)  # TODO: Double check this..
             collaboration_cost = (collaboration_component + (1 - panic_score)) / 2
-            # print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", 1 - panic_score)
+            print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", 1 - panic_score)
 
         # print("Collaboration cost:", collaboration_cost)
         return collaboration_cost
@@ -541,7 +541,7 @@ class Human(Agent):
         collaboration_cost = self.get_collaboration_cost()
 
         rand = random.random()
-        if rand < collaboration_cost:
+        if rand > collaboration_cost:  # Collaboration if rand is GREATER than our collaboratoin_cost (Highe collaboration_cost means less likely to collaborate)
             return True
         else:
             return False
@@ -812,14 +812,17 @@ class Human(Agent):
                 if not planned_pos:
                     self.get_random_target()
                 elif self.mobility == Human.Mobility.PANIC:  # Panic
-                    if random.random() < self.get_panic_score():  # Test their panic score to see if they will move randomly, or keep their original target
+                    panic_score = self.get_panic_score()
+
+                    if panic_score > 0.9 and random.random() < panic_score:  # If they have above 90% panic score, test the score to see if they faint
+                        print("Agent fainted!")
+                        self.mobility = Human.Mobility.INCAPACITATED
+                        return
+                    if random.random() < panic_score:  # Test their panic score to see if they will move randomly, or keep their original target
+                        print("Agent moving randomly in panic!")
                         self.planned_action = None
                         self.planned_target = (None, None)
                         self.get_random_target()
-                    elif self.shock == self.MAX_SHOCK and random.random() < self.get_panic_score():  # If they have maximum shock, test their panic score again to see if they will faint
-                        print("Agent fainted")
-                        self.mobility = Human.Mobility.INCAPACITATED
-                        return
 
                 self.move_toward_target()
 
