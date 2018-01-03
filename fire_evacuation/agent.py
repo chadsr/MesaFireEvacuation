@@ -530,9 +530,9 @@ class Human(Agent):
         else:
             panic_score = self.get_panic_score()
             total_count = self.verbal_collaboration_count + self.morale_collaboration_count + self.physical_collaboration_count
-            collaboration_component = 1 / np.exp((total_count + 1) / self.collaboration)  # TODO: Double check this..
-            collaboration_cost = (collaboration_component + (1 - panic_score)) / 2
-            print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", 1 - panic_score)
+            collaboration_component = 1 / np.exp(self.collaboration / (total_count + 1))  # TODO: Double check this..
+            collaboration_cost = (collaboration_component + panic_score) / 2
+            print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
 
         # print("Collaboration cost:", collaboration_cost)
         return collaboration_cost
