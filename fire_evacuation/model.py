@@ -2,6 +2,8 @@ from os import path
 import random
 import numpy as np
 import networkx as nx
+import matplotlib.pyplot as plt
+import time
 
 from mesa import Model
 from mesa.datacollection import DataCollector
@@ -48,7 +50,6 @@ class FireEvacuation(Model):
         self.visualise_vision = visualise_vision
         self.fire_probability = fire_probability
         self.fire_started = False  # Turns to true when a fire has started
-        self.finished = False
 
         # Set up model objects
         if multithreaded:
@@ -152,6 +153,24 @@ class FireEvacuation(Model):
 
         self.running = True
 
+    def save_figures(self):
+        results = self.datacollector.get_model_vars_dataframe()
+
+        dpi = 100
+        fig, axes = plt.subplots(figsize=(1920 / dpi, 1080 / dpi), dpi=dpi, nrows=1, ncols=3)
+
+        status_results = results.loc[:, ['Alive', 'Dead', 'Escaped']]
+        status_results.plot(ax=axes[0])
+
+        mobility_results = results.loc[:, ['Incapacitated', 'Normal', 'Panic']]
+        mobility_results.plot(ax=axes[1])
+
+        collaboration_results = results.loc[:, ['Verbal Collaboration', 'Physical Collaboration', 'Morale Collaboration']]
+        collaboration_results.plot(ax=axes[2])
+
+        timestr = time.strftime("%Y%m%d-%H%M%S")
+        plt.savefig(timestr + '.png')
+
     def start_fire(self):
         rand = random.random()
         if rand < self.fire_probability:
@@ -175,12 +194,10 @@ class FireEvacuation(Model):
 
         self.datacollector.collect(self)
 
-        if self.finished:
-            self.running = False
-
-        # If no more agents are alive, stop the model after the next step
+        # If no more agents are alive, stop the model and collect the results
         if self.count_human_status(self, Human.Status.ALIVE) == 0:
-            self.finished = True
+            self.running = False
+            self.save_figures()
 
     @staticmethod
     def count_human_collaboration(model, collaboration_type):
