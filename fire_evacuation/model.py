@@ -111,9 +111,9 @@ class FireEvacuation(Model):
                 "Alive": lambda m: self.count_human_status(m, "alive"),
                 "Dead": lambda m: self.count_human_status(m, "dead"),
                 "Escaped": lambda m: self.count_human_status(m, "escaped"),
-                "Incapacitated": lambda m: self.count_human_mobility(m, 0),
-                "Normal": lambda m: self.count_human_mobility(m, 1),
-                "Panic": lambda m: self.count_human_mobility(m, 2),
+                "Incapacitated": lambda m: self.count_human_mobility(m, Human.Mobility.INCAPACITATED),
+                "Normal": lambda m: self.count_human_mobility(m, Human.Mobility.NORMAL),
+                "Panic": lambda m: self.count_human_mobility(m, Human.Mobility.PANIC),
                 "Verbal Collaboration": lambda m: self.count_human_collaboration(m, "verbal"),
                 "Physical Collaboration": lambda m: self.count_human_collaboration(m, "physical"),
                 "Morale Collaboration": lambda m: self.count_human_collaboration(m, "morale")

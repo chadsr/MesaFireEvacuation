@@ -224,12 +224,6 @@ class DeadHuman(FloorObject):
         super().__init__(pos, traversable=True, flammable=True, spreads_smoke=True, model=model)
 
 
-class Mobility(Enum):
-    INCAPACITATED = 0
-    NORMAL = 1
-    PANIC = 2
-
-
 class Human(Agent):
     """
     A human agent, which will attempt to escape from the grid.
@@ -240,6 +234,12 @@ class Human(Agent):
         Health: Health of the agent (between 0 and 1)
         ...
     """
+
+    class Mobility(Enum):
+        INCAPACITATED = 0
+        NORMAL = 1
+        PANIC = 2
+
     MIN_HEALTH = 0
     MAX_HEALTH = 1
 
@@ -280,7 +280,7 @@ class Human(Agent):
         self.pos = pos
         self.visibility = 2
         self.health = health
-        self.mobility = Mobility.NORMAL
+        self.mobility = Human.Mobility.NORMAL
         self.shock = self.MIN_SHOCK
         self.speed = speed
         self.vision = vision
@@ -458,7 +458,7 @@ class Human(Agent):
 
             self.die()
         elif self.speed == self.MIN_SPEED:
-            self.mobility = Mobility.INCAPACITATED
+            self.mobility = Human.Mobility.INCAPACITATED
 
     def panic_rules(self):
         shock_modifier = self.DEFAULT_SHOCK_MODIFIER  # Shock will decrease by this amount if no new shock is added
@@ -486,12 +486,12 @@ class Human(Agent):
 
         panic_score = self.get_panic_score()
 
-        if panic_score >= self.PANIC_THRESHOLD and self.mobility == Mobility.NORMAL:
+        if panic_score >= self.PANIC_THRESHOLD and self.mobility == Human.Mobility.NORMAL:
             print("Agent is panicking! Score:", panic_score, "Shock:", self.shock)
-            self.mobility = Mobility.PANIC
-        elif panic_score < self.PANIC_THRESHOLD and self.mobility == Mobility.PANIC:
+            self.mobility = Human.Mobility.PANIC
+        elif panic_score < self.PANIC_THRESHOLD and self.mobility == Human.Mobility.PANIC:
             print("Agent stopped panicking! Score:", panic_score, "Shock:", self.shock)
-            self.mobility = Mobility.NORMAL
+            self.mobility = Human.Mobility.NORMAL
 
     def learn_environment(self):
         if self.knowledge < self.MAX_KNOWLEDGE:  # If there is still something to learn
@@ -533,7 +533,7 @@ class Human(Agent):
         success = False
         for agents, location in self.visible_tiles:
             for agent in agents:
-                if isinstance(agent, Human) and agent.get_mobility() == Mobility.NORMAL:
+                if isinstance(agent, Human) and agent.get_mobility() == Human.Mobility.NORMAL:
                     agent_target, agent_action = agent.get_plan()
                     if not agent_action and not isinstance(agent_target[0], FireExit):  # If the agent isn't planning an action and isn't already heading to a fire exit
                         agent.set_plan(target_agent, target_location)  # Set the agent's planned_target to the target location
@@ -551,14 +551,14 @@ class Human(Agent):
 
                 for agent in visible_agents:
                     if isinstance(agent, Human) and not self.planned_action:
-                        if agent.get_mobility() == Mobility.INCAPACITATED:  # If the agent is incapacitated, help them
+                        if agent.get_mobility() == Human.Mobility.INCAPACITATED:  # If the agent is incapacitated, help them
                             # Physical collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = "carry"  # Plan to carry the agent
                             self.physical_collaboration_count += 1
                             # print("Agent planned physical collaboration at", location)
                             break
-                        elif agent.get_mobility() == Mobility.PANIC and not self.planned_action:
+                        elif agent.get_mobility() == Human.Mobility.PANIC and not self.planned_action:
                             # Morale collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = "morale"  # Plan to carry the agent
@@ -672,12 +672,12 @@ class Human(Agent):
 
         if planned_agent:
             # Agent had planned morale collaboration, but the agent is no longer panicking, so drop it.
-            if self.planned_action == "morale" and planned_agent.get_mobility() != Mobility.PANIC:
+            if self.planned_action == "morale" and planned_agent.get_mobility() != Human.Mobility.PANIC:
                 # print("Target agent no longer panicking. Dropping action.")
                 self.planned_target = (None, None)
                 self.planned_action = None
             # Agent had planned physical collaboration, but the agent is no longer incapacitated, so drop it.
-        elif self.planned_action == "physical" and (planned_agent.get_mobility() != Mobility.INCAPACITATED):
+        elif self.planned_action == "physical" and (planned_agent.get_mobility() != Human.Mobility.INCAPACITATED):
                 # print("Target agent no longer incapacitated. Dropping action.")
                 self.planned_target = (None, None)
                 self.planned_action = None
@@ -761,7 +761,7 @@ class Human(Agent):
         if not self.escaped and self.pos:
             self.health_mobility_rules()
 
-            if self.mobility == Mobility.INCAPACITATED:  # Incapacitated, so return already
+            if self.mobility == Human.Mobility.INCAPACITATED:  # Incapacitated, so return already
                 return
 
             if self.health > self.MIN_HEALTH:
@@ -779,20 +779,20 @@ class Human(Agent):
                         self.attempt_exit_plan()
 
                     # Check if anything in vision can be collaborated with, if the agent has normal mobility
-                    if self.mobility == Mobility.NORMAL:
+                    if self.mobility == Human.Mobility.NORMAL:
                         self.check_for_collaboration()
 
                 planned_pos = self.planned_target[1]
                 if not planned_pos:
                     self.get_random_target()
-                elif self.mobility == Mobility.PANIC:  # Panic
+                elif self.mobility == Human.Mobility.PANIC:  # Panic
                     if random.random() < self.get_panic_score():  # Test their panic score to see if they will move randomly, or keep their original target
                         self.planned_action = None
                         self.planned_target = (None, None)
                         self.get_random_target()
                     elif self.shock == self.MAX_SHOCK and random.random() < self.get_panic_score():  # If they have maximum shock, test their panic score again to see if they will faint
                         print("Agent fainted")
-                        self.mobility = Mobility.INCAPACITATED
+                        self.mobility = Human.Mobility.INCAPACITATED
                         return
 
                 self.move_toward_target()
