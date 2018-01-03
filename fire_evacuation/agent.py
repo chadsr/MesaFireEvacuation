@@ -320,9 +320,8 @@ class Human(Agent):
 
         # Add new vision tiles
         for _, tile in visible_neighborhood:
-            if self.model.grid.is_cell_empty(tile):
-                sight_object = Sight(tile, self.model)
-                self.model.grid.place_agent(sight_object, tile)
+            sight_object = Sight(tile, self.model)
+            self.model.grid.place_agent(sight_object, tile)
 
     # A strange implementation of ray-casting, using Bresenham's Line Algorithm, which takes into account smoke and visibility of objects
     #@do_profile()
