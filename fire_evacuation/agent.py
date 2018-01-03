@@ -273,44 +273,62 @@ class Human(Agent):
         # A set representing where the agent has between
         self.visited_tiles = {self.pos}
 
+    def update_sight_tiles(self, visible_neighborhood):
+        if self.visible_tiles:
+            # Remove old vision tiles
+            for tile in self.visible_tiles:
+                contents = self.model.grid.get_cell_list_contents(tile[1])
+                for agent in contents:
+                    if isinstance(agent, Sight):
+                        self.model.grid.remove_agent(agent)
+
+        # Add new vision tiles
+        for _, tile in visible_neighborhood:
+            if self.model.grid.is_cell_empty(tile):
+                sight_object = Sight(tile, self.model)
+                self.model.grid.place_agent(sight_object, tile)
+
     # A strange implementation of ray-casting, using Bresenham's Line Algorithm, which takes into account smoke and visibility of objects
+    #@do_profile()
     def get_visible_tiles(self):
         neighborhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.vision)
         visible_neighborhood = set()
+        checked_tiles = set()  # A set of already checked tiles, for avoiding repetition and thus increased efficiency
 
-        for pos in neighborhood:
-            blocked = False
-            try:
-                smoke_count = 0  # The number of smoke tiles encountered in the path so far
-                path = get_line(self.pos, pos)
-                for tile in path:
-                    contents = self.model.grid.get_cell_list_contents(tile)
-                    visible_contents = []
-                    for obj in contents:
-                        if isinstance(obj, Wall):  # We hit a wall, reject rest of path and move to next
-                            blocked = True
+        for pos in reversed(neighborhood):  # Reverse the neighborhood so we start from the furthest locations and work our way inwards
+            if pos not in checked_tiles:
+                blocked = False
+                try:
+                    smoke_count = 0  # The number of smoke tiles encountered in the path so far
+                    path = get_line(self.pos, pos)
+
+                    for i, tile in enumerate(path):
+                        contents = self.model.grid.get_cell_list_contents(tile)
+                        visible_contents = []
+                        for obj in contents:
+                            if isinstance(obj, Wall):  # We hit a wall, reject rest of path and move to next
+                                blocked = True
+                                break
+                            elif isinstance(obj, Smoke):  # We hit a smoke tile, increase the counter
+                                smoke_count += 1
+
+                            # If the object has a visibility score greater than the smoke encountered in the path, it's visible
+                            if obj.visibility and obj.visibility > smoke_count:
+                                visible_contents.append(obj)
+
+                        if blocked:
+                            checked_tiles.update(path[i:])  # Add the rest of the path to checked tiles, since we now know they are not visible
                             break
-                        elif isinstance(obj, Smoke):  # We hit a smoke tile, increase the counter
-                            smoke_count += 1
+                        else:
+                            # If a wall didn't block the way, add the visible agents at this location
+                            checked_tiles.add(tile)  # Add the tile to checked tiles so we don't check it again
+                            visible_neighborhood.add((tuple(visible_contents), tile))
 
-                        # If the object has a visibility score greater than the smoke encountered in the path, it's visible
-                        if obj.visibility and obj.visibility > smoke_count:
-                            visible_contents.append(obj)
-
-                    if blocked:
-                        break
-                    else:
-                        # If a wall didn't block the way, add the visible agents at this location
-                        visible_neighborhood.add((tuple(visible_contents), tile))
-
-            except Exception as e:
-                print(e)
+                except Exception as e:
+                    print(e)
 
         if self.model.visualise_vision:
-            for _, tile in visible_neighborhood:
-                if self.model.grid.is_cell_empty(tile):
-                    sight_object = Sight(tile, self.model)
-                    self.model.grid.place_agent(sight_object, tile)
+            self.update_sight_tiles(visible_neighborhood)
 
         return list(visible_neighborhood)
 
@@ -702,7 +720,7 @@ class Human(Agent):
             # Add back the edges we removed when removing any non-traversable nodes from the global graph, because they may be traversable again next step
             self.model.graph.add_edges_from(list(pruned_edges))
 
-    @do_profile()
+    #@do_profile()
     def step(self):
         if not self.escaped and self.pos:
             self.health_mobility_rules()
