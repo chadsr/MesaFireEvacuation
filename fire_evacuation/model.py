@@ -143,7 +143,7 @@ class FireEvacuation(Model):
                 belief_distribution = [0.9, 0.1]  # [Believes, Doesn't Believe]
                 believes_alarm = np.random.choice([True, False], p=belief_distribution)
 
-                human = Human(pos, health=health, speed=speed, vision=vision, collaboration=collaboration_factor, knowledge=0, nervousness=nervousness, role=None, experience=experience, believes_alarm=believes_alarm, model=self)
+                human = Human(pos, health=health, speed=speed, vision=vision, collaboration=collaboration_factor, nervousness=nervousness, role=None, experience=experience, believes_alarm=believes_alarm, model=self)
 
                 self.grid.place_agent(human, pos)
                 self.schedule.add(human)
