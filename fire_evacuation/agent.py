@@ -240,6 +240,14 @@ class Human(Agent):
         Health: Health of the agent (between 0 and 1)
         ...
     """
+    MIN_HEALTH = 0
+    MAX_HEALTH = 1
+
+    MIN_EXPERIENCE = 1
+    MAX_EXPERIENCE = 10
+
+    MIN_SPEED = 0
+    MAX_SPEED = 2
 
     MIN_KNOWLEDGE = 0
     MAX_KNOWLEDGE = 1
@@ -442,14 +450,15 @@ class Human(Agent):
                     self.speed -= self.SPEED_MODIFIER_SMOKE
 
         # Prevent health and speed from going below 0
-        if self.health < self.model.MIN_HEALTH:
-            self.health = self.model.MIN_HEALTH
-        if self.speed < self.model.MIN_SPEED:
-            self.speed = self.model.MIN_SPEED
+        if self.health < self.MIN_HEALTH:
+            self.health = self.MIN_HEALTH
+        if self.speed < self.MIN_SPEED:
+            self.speed = self.MIN_SPEED
 
-        if self.health == self.model.MIN_HEALTH:
+        if self.health == self.MIN_HEALTH:
+
             self.die()
-        elif self.speed == self.model.MIN_SPEED:
+        elif self.speed == self.MIN_SPEED:
             self.mobility = Mobility.INCAPACITATED
 
     def panic_rules(self):
@@ -756,7 +765,7 @@ class Human(Agent):
             if self.mobility == Mobility.INCAPACITATED:  # Incapacitated, so return already
                 return
 
-            if self.health > self.model.MIN_HEALTH:
+            if self.health > self.MIN_HEALTH:
                 self.visible_tiles = self.get_visible_tiles()
 
                 self.panic_rules()
@@ -782,7 +791,7 @@ class Human(Agent):
                         self.planned_action = None
                         self.planned_target = (None, None)
                         self.get_random_target()
-                    elif self.shock == self.MAX_SHOCK and self.model.random.random() < self.get_panic_score():  # If they have maximum shock, test their panic score again to see if they will faint
+                    elif self.shock == self.MAX_SHOCK and random.random() < self.get_panic_score():  # If they have maximum shock, test their panic score again to see if they will faint
                         print("Agent fainted")
                         self.mobility = Mobility.INCAPACITATED
                         return
@@ -795,9 +804,9 @@ class Human(Agent):
                     self.model.grid.remove_agent(self)
 
     def get_status(self):
-        if self.health > self.model.MIN_HEALTH and not self.escaped:
+        if self.health > self.MIN_HEALTH and not self.escaped:
             return "alive"
-        elif self.health <= self.model.MIN_HEALTH and not self.escaped:
+        elif self.health <= self.MIN_HEALTH and not self.escaped:
             return "dead"
         elif self.escaped:
             return "escaped"
@@ -831,7 +840,7 @@ class Human(Agent):
 
     def attempt_morale_boost(self, experience):
         rand = random.random()
-        if rand < (experience / self.model.MAX_EXPERIENCE):
+        if rand < (experience / self.MAX_EXPERIENCE):
             self.morale_boost = True
             return True
         else:
