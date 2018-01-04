@@ -579,13 +579,13 @@ class Human(Agent):
                             # Physical collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = Human.Action.PHYSICAL_SUPPORT  # Plan to carry the agent
-                            # print("Agent planned physical collaboration at", location)
+                            print("Agent planned physical collaboration at", location)
                             break
                         elif agent.get_mobility() == Human.Mobility.PANIC and not self.planned_action:
                             # Morale collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = Human.Action.MORALE_SUPPORT  # Plan to carry the agent
-                            # print("Agent planned morale collaboration at", location)
+                            print("Agent planned morale collaboration at", location)
                             break
                     elif isinstance(agent, FireExit):
                         # Verbal collaboration
@@ -755,7 +755,7 @@ class Human(Agent):
             else:  # Target is not traversable (e.g. we are going to another Human), so don't include target in the path
                 path = self.get_path(self.model.graph, self.planned_target[1], include_target=False)
 
-            if path and len(path) > 1:  # If there is a path and it doesn't just contain our current location
+            if path:
                 next_location, next_path = self.get_next_location(path)  # The final location and path traversed to said location in this step
 
                 if self.check_retreat(next_path, next_location):
@@ -773,8 +773,9 @@ class Human(Agent):
 
                 elif self.pos == path[-1]:
                     # The human reached their target!
-
+                    print("\nREACHED TARGET\n")
                     if self.planned_action:  # If they had an action to perform when they reached the target
+                        print("\nPLAN:", self.planned_target, self.planned_action)
                         self.perform_action()
 
                     self.planned_target = (None, None)
