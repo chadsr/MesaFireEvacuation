@@ -11,7 +11,7 @@ from fire_evacuation.agent import Human
 
 OUTPUT_DIR = "."
 
-MIN_COLLABORATION = 0
+MIN_COLLABORATION = 9
 MAX_COLLABORATION = 10
 
 GRAPH_DPI = 100
@@ -65,18 +65,19 @@ previous_dataframes = [f for f in os.listdir(OUTPUT_DIR) if (os.path.isfile(os.p
 
 # Save the dataframe to a file so we have the oppurtunity to concatenate separate dataframes from separate runs
 dataframe = param_run.get_model_vars_dataframe()
-dataframe.to_pickle(path="dataframe_" + end_timestamp)
+dataframe.to_pickle(path="dataframe_" + end_timestamp + ".pickle")
 
 # Concatenate any previous dataframes
 if previous_dataframes:
     print("Found previous dataframes:", previous_dataframes)
 
-scatter_plot = plt.scatter(dataframe.collaboration_factor, dataframe.PercentageEscaped, figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), dpi=GRAPH_DPI)
-scatter_plot.set_title("Evacuation Success: " + str(human_count) + " Human Agents")
-scatter_plot.set_xlabel("Collaboration Factor")
-scatter_plot.set_ylabel("Percentage Escaped")
+fig = plt.figure(figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), dpi=GRAPH_DPI)
+plt.scatter(dataframe.collaboration_factor, dataframe.PercentageEscaped)
+fig.suptitle("Evacuation Success: " + str(human_count) + " Human Agents", fontsize=20)
+plt.xlabel("Collaboration Factor", fontsize=14)
+plt.ylabel("Percentage Escaped (%)", fontsize=14)
 
-plt.xlim(MIN_COLLABORATION, MAX_COLLABORATION)
+plt.xticks(range(MIN_COLLABORATION, MAX_COLLABORATION + 1))
 plt.ylim(0, 100)
 
-plt.savefig("batch_run_" + end_timestamp + ".png")
+plt.savefig("batch_run_" + end_timestamp + ".png", dpi=GRAPH_DPI)
