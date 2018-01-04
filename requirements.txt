@@ -1,4 +1,5 @@
-networkx>=2.0
-numpy>=1.13.3
-matplotlib>=2.1.0
 Mesa>=0.8.2
+numpy>=1.13.3
+networkx>=2.0
+matplotlib>=2.1.0
+pandas>=0.21.1
