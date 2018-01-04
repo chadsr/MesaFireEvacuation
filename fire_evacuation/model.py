@@ -10,7 +10,6 @@ from mesa.datacollection import DataCollector
 from mesa.space import MultiGrid
 from mesa.time import RandomActivation
 
-from .scheduler import MultithreadedRandomActivation
 from .agent import Human, Wall, FireExit, Furniture, Fire, Door
 
 
@@ -30,7 +29,7 @@ class FireEvacuation(Model):
     MIN_VISION = 1
     # MAX_VISION is simply the size of the grid
 
-    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision, random_spawn, multithreaded):
+    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision, random_spawn, save_plots):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
         with open(path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
@@ -50,12 +49,10 @@ class FireEvacuation(Model):
         self.visualise_vision = visualise_vision
         self.fire_probability = fire_probability
         self.fire_started = False  # Turns to true when a fire has started
+        self.save_plots = save_plots
 
         # Set up model objects
-        if multithreaded:
-            self.schedule = MultithreadedRandomActivation(self)
-        else:
-            self.schedule = RandomActivation(self)
+        self.schedule = RandomActivation(self)
 
         self.grid = MultiGrid(height, width, torus=False)
 
@@ -160,15 +157,25 @@ class FireEvacuation(Model):
         fig, axes = plt.subplots(figsize=(1920 / dpi, 1080 / dpi), dpi=dpi, nrows=1, ncols=3)
 
         status_results = results.loc[:, ['Alive', 'Dead', 'Escaped']]
-        status_results.plot(ax=axes[0])
+        status_plot = status_results.plot(ax=axes[0])
+        status_plot.set_title("Human Status")
+        status_plot.set_xlabel("Simulation Step")
+        status_plot.set_ylabel("Count")
 
         mobility_results = results.loc[:, ['Incapacitated', 'Normal', 'Panic']]
-        mobility_results.plot(ax=axes[1])
+        mobility_plot = mobility_results.plot(ax=axes[1])
+        mobility_plot.set_title("Human Mobility")
+        mobility_plot.set_xlabel("Simulation Step")
+        mobility_plot.set_ylabel("Count")
 
         collaboration_results = results.loc[:, ['Verbal Collaboration', 'Physical Collaboration', 'Morale Collaboration']]
-        collaboration_results.plot(ax=axes[2])
+        collaboration_plot = collaboration_results.plot(ax=axes[2])
+        collaboration_plot.set_title("Human Collaboration")
+        collaboration_plot.set_xlabel("Simulation Step")
+        collaboration_plot.set_ylabel("Successful Attempts")
 
         timestr = time.strftime("%Y%m%d-%H%M%S")
+        plt.suptitle("Collaboration Factor: " + str(self.collaboration_factor) + " Number of Human Agents: " + str(self.human_count), fontsize=16)
         plt.savefig(timestr + '.png')
 
     def start_fire(self):
@@ -197,7 +204,9 @@ class FireEvacuation(Model):
         # If no more agents are alive, stop the model and collect the results
         if self.count_human_status(self, Human.Status.ALIVE) == 0:
             self.running = False
-            self.save_figures()
+
+            if self.save_plots:
+                self.save_figures()
 
     @staticmethod
     def count_human_collaboration(model, collaboration_type):

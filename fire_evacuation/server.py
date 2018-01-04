@@ -90,8 +90,8 @@ model_params = {
     "collaboration_factor": UserSettableParameter("slider", "Collaboration Factor", value=5, min_value=0, max_value=10, step=1),
     "fire_probability": UserSettableParameter("slider", "Probability of Fire", value=0.1, min_value=0, max_value=1, step=0.01),
     "random_spawn": UserSettableParameter('checkbox', 'Spawn Agents at Random Locations', value=True),
-    "multithreaded": UserSettableParameter('checkbox', 'Use Multithreading', value=False),
-    "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False)
+    "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False),
+    "save_plots": UserSettableParameter('checkbox', 'Save plots to file', value=True)
 }
 
 server = ModularServer(FireEvacuation, [canvas_element, status_chart, mobility_chart, collaboration_chart], "Fire Evacuation",
