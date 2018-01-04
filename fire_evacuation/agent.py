@@ -738,7 +738,7 @@ class Human(Agent):
             else:  # Target is not traversable (e.g. we are going to another Human), so don't include target in the path
                 path = self.get_path(self.model.graph, self.planned_target[1], include_target=False)
 
-            if path:
+            if path and len(path) > 1:  # If there is a path and it doesn't just contain our current location
                 next_location, next_path = self.get_next_location(path)  # The final location and path traversed to said location in this step
 
                 if self.check_retreat(next_path, next_location):
