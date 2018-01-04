@@ -532,7 +532,7 @@ class Human(Agent):
             total_count = self.verbal_collaboration_count + self.morale_collaboration_count + self.physical_collaboration_count
             collaboration_component = 1 / np.exp(self.collaboration / (total_count + 1))  # TODO: Double check this..
             collaboration_cost = (collaboration_component + panic_score) / 2
-            print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
+            #print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
 
         # print("Collaboration cost:", collaboration_cost)
         return collaboration_cost
@@ -666,11 +666,14 @@ class Human(Agent):
                 diff_y = y - next_y
                 retreat_location = (sum([x, diff_x]), sum([y, diff_y]))
 
+                print(self.pos, retreat_location)
+
                 if self.model.grid.out_of_bounds(retreat_location):
                     print("retreat location out of bounds...")
 
                 print("Agent retreating from fire/smoke")
                 self.planned_target = (None, retreat_location)
+                self.planned_action = None
 
                 return True
 
@@ -758,6 +761,7 @@ class Human(Agent):
                         self.perform_action()
 
                     self.planned_target = (None, None)
+                    self.planned_action = None
                     break
 
                 else:  # We want to move here but it's blocked, so remove this node from the traversable graph
@@ -770,12 +774,14 @@ class Human(Agent):
                     if next_location == path[-1]:
                         next_location = None
                         self.planned_target = (None, None)
+                        self.planned_action = None
                         break
                     else:
                         next_location = None
 
             else:  # No path is possible, so drop the target
                 self.planned_target = (None, None)
+                self.planned_action = None
                 break
 
         if pruned_edges:
