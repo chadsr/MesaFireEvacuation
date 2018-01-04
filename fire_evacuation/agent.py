@@ -1,5 +1,3 @@
-from line_profiler import LineProfiler  # TODO: Remove from final
-
 import networkx as nx
 import numpy as np
 import sys
@@ -7,20 +5,6 @@ import random
 from enum import Enum
 
 from mesa import Agent
-
-
-def do_profile():
-        def inner(func):
-            def profiled_func(*args, **kwargs):
-                try:
-                    profiler = LineProfiler()
-                    profiler.add_function(func)
-                    profiler.enable_by_count()
-                    return func(*args, **kwargs)
-                finally:
-                    profiler.print_stats()
-            return profiled_func
-        return inner
 
 
 # Credits to http://www.roguebasin.com/index.php?title=Bresenham%27s_Line_Algorithm
@@ -333,12 +317,12 @@ class Human(Agent):
                         self.model.grid.remove_agent(agent)
 
         # Add new vision tiles
-        for _, tile in visible_neighborhood:
-            sight_object = Sight(tile, self.model)
-            self.model.grid.place_agent(sight_object, tile)
+        for contents, tile in visible_neighborhood:
+            if self.model.grid.is_cell_empty(tile) or contents:  # Don't place if the tile has contents but the agent can't see it
+                sight_object = Sight(tile, self.model)
+                self.model.grid.place_agent(sight_object, tile)
 
     # A strange implementation of ray-casting, using Bresenham's Line Algorithm, which takes into account smoke and visibility of objects
-    #@do_profile()
     def get_visible_tiles(self):
         neighborhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=True, radius=self.vision)
         visible_neighborhood = set()
@@ -536,13 +520,16 @@ class Human(Agent):
             total_count = self.verbal_collaboration_count + self.morale_collaboration_count + self.physical_collaboration_count
             collaboration_component = 1 / np.exp(self.collaboration / (total_count + 1))  # TODO: Double check this..
             collaboration_cost = (collaboration_component + panic_score) / 2
-            #print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
+            # print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
 
         # print("Collaboration cost:", collaboration_cost)
         return collaboration_cost
 
     def test_collaboration(self):
         collaboration_cost = self.get_collaboration_cost()
+
+        if collaboration_cost == 0:
+            return False
 
         rand = random.random()
         if rand > collaboration_cost:  # Collaboration if rand is GREATER than our collaboratoin_cost (Highe collaboration_cost means less likely to collaborate)
@@ -580,13 +567,13 @@ class Human(Agent):
                             # Physical collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = Human.Action.PHYSICAL_SUPPORT  # Plan to carry the agent
-                            print("Agent planned physical collaboration at", location)
+                            # print("Agent planned physical collaboration at", location)
                             break
                         elif agent.get_mobility() == Human.Mobility.PANIC and not self.planned_action:
                             # Morale collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = Human.Action.MORALE_SUPPORT  # Plan to carry the agent
-                            print("Agent planned morale collaboration at", location)
+                            # print("Agent planned morale collaboration at", location)
                             break
                     elif isinstance(agent, FireExit):
                         # Verbal collaboration
@@ -673,18 +660,22 @@ class Human(Agent):
                 # Retreat if there's fire, or smoke (and no collaboration attempt)
                 retreat_location = self.get_retreat_location(next_location)
 
-                # Check if the retreat location is also smoke, if so, we are surrounded by smoke, so move randomly
-                contents = self.model.grid.get_cell_list_contents(retreat_location)
-                for agent in contents:
-                    if isinstance(agent, Smoke) or isinstance(agent, Fire):
-                        self.get_random_target()
-                        print("Agent surrounded by smoke and moving randomly")
-                        retreat_location = None
-                        break
+                # Check if retreat location is out of bounds
+                if not self.model.grid.out_of_bounds(retreat_location):
+                    # Check if the retreat location is also smoke, if so, we are surrounded by smoke, so move randomly
+                    contents = self.model.grid.get_cell_list_contents(retreat_location)
+                    for agent in contents:
+                        if isinstance(agent, Smoke) or isinstance(agent, Fire):
+                            self.get_random_target()
+                            print("Agent surrounded by smoke and moving randomly")
+                            retreat_location = None
+                            break
 
-                if retreat_location:
-                    print("Agent retreating opposite to fire/smoke")
-                    self.planned_target = (None, retreat_location)
+                    if retreat_location:
+                        print("Agent retreating opposite to fire/smoke")
+                        self.planned_target = (None, retreat_location)
+                else:
+                    self.get_random_target()  # Since our retreat is out of bounds, just go to a random location
 
                 self.planned_action = Human.Action.RETREAT
                 return True
@@ -706,13 +697,13 @@ class Human(Agent):
         planned_agent, _ = self.planned_target
 
         if planned_agent:
-            # Agent had planned morale collaboration, but the agent is no longer panicking, so drop it.
-            if self.planned_action == Human.Action.MORALE_SUPPORT and planned_agent.get_mobility() != Human.Mobility.PANIC:
+            # Agent had planned morale collaboration, but the agent is no longer panicking or no longer alive, so drop it.
+            if self.planned_action == Human.Action.MORALE_SUPPORT and (planned_agent.get_mobility() != Human.Mobility.PANIC or not planned_agent.get_status() == Human.Status.ALIVE):
                 # print("Target agent no longer panicking. Dropping action.")
                 self.planned_target = (None, None)
                 self.planned_action = None
-            # Agent had planned physical collaboration, but the agent is no longer incapacitated or has already been carried, so drop it.
-            elif self.planned_action == Human.Action.PHYSICAL_SUPPORT and ((planned_agent.get_mobility() != Human.Mobility.INCAPACITATED) or planned_agent.is_carried()):
+            # Agent had planned physical collaboration, but the agent is no longer incapacitated or has already been carried or is not alive, so drop it.
+        elif self.planned_action == Human.Action.PHYSICAL_SUPPORT and ((planned_agent.get_mobility() != Human.Mobility.INCAPACITATED) or planned_agent.is_carried() or not planned_agent.get_status() == Human.Status.ALIVE):
                 self.planned_target = (None, None)
                 self.planned_action = None
         elif self.planned_action == Human.Action.RETREAT:
@@ -769,7 +760,16 @@ class Human(Agent):
                     self.visited_tiles.add(next_location)
 
                     if self.carrying:
-                        self.model.grid.move_agent(self.carrying, self.pos)
+                        agent = self.carrying
+                        if agent.get_status() != Human.Status.DEAD:
+                            try:
+                                self.model.grid.move_agent(self.carrying, self.pos)
+                            except Exception as e:
+                                agent = self.carrying
+                                print("Failed to move carried agent", agent, agent.get_mobility(), agent.get_status(), agent.get_health(), agent.get_position(), self.pos)
+                                sys.exit(1)
+                        else:  # Agent is dead, so we can't carry them any more
+                            self.stop_carrying()
 
                 elif self.pos == path[-1]:
                     # The human reached their target!
@@ -805,59 +805,57 @@ class Human(Agent):
             # Add back the edges we removed when removing any non-traversable nodes from the global graph, because they may be traversable again next step
             self.model.graph.add_edges_from(list(pruned_edges))
 
-    #@do_profile()
     def step(self):
         if not self.escaped and self.pos:
             self.health_mobility_rules()
 
-            if self.mobility == Human.Mobility.INCAPACITATED:  # Incapacitated, so return already
+            if self.mobility == Human.Mobility.INCAPACITATED or not self.pos:  # Incapacitated or died, so return already
                 return
 
-            if self.health > self.MIN_HEALTH:
-                self.visible_tiles = self.get_visible_tiles()
+            self.visible_tiles = self.get_visible_tiles()
 
-                self.panic_rules()
+            self.panic_rules()
 
-                self.learn_environment()
+            self.learn_environment()
 
-                planned_agent = self.planned_target[0]
+            planned_agent = self.planned_target[0]
 
-                # If a fire has started and the agent believes it, attempt to plan an exit location if we haven't already and we aren't performing an action
-                if self.model.fire_started and self.believes_alarm:
-                    if not isinstance(planned_agent, FireExit) and not self.planned_action:
-                        self.attempt_exit_plan()
+            # If a fire has started and the agent believes it, attempt to plan an exit location if we haven't already and we aren't performing an action
+            if self.model.fire_started and self.believes_alarm:
+                if not isinstance(planned_agent, FireExit) and not self.planned_action:
+                    self.attempt_exit_plan()
 
-                    # Check if anything in vision can be collaborated with, if the agent has normal mobility
-                    if self.mobility == Human.Mobility.NORMAL:
-                        self.check_for_collaboration()
+                # Check if anything in vision can be collaborated with, if the agent has normal mobility
+                if self.mobility == Human.Mobility.NORMAL:
+                    self.check_for_collaboration()
 
-                planned_pos = self.planned_target[1]
-                if not planned_pos:
+            planned_pos = self.planned_target[1]
+            if not planned_pos:
+                self.get_random_target()
+            elif self.mobility == Human.Mobility.PANIC:  # Panic
+                panic_score = self.get_panic_score()
+
+                if panic_score > 0.9 and random.random() < panic_score:  # If they have above 90% panic score, test the score to see if they faint
+                    print("Agent fainted!")
+                    self.mobility = Human.Mobility.INCAPACITATED
+                    return
+                if random.random() < panic_score:  # Test their panic score to see if they will move randomly, or keep their original target
+                    print("Agent moving randomly in panic!")
+                    self.planned_action = None
+                    self.planned_target = (None, None)
                     self.get_random_target()
-                elif self.mobility == Human.Mobility.PANIC:  # Panic
-                    panic_score = self.get_panic_score()
 
-                    if panic_score > 0.9 and random.random() < panic_score:  # If they have above 90% panic score, test the score to see if they faint
-                        print("Agent fainted!")
-                        self.mobility = Human.Mobility.INCAPACITATED
-                        return
-                    if random.random() < panic_score:  # Test their panic score to see if they will move randomly, or keep their original target
-                        print("Agent moving randomly in panic!")
-                        self.planned_action = None
-                        self.planned_target = (None, None)
-                        self.get_random_target()
+            self.move_toward_target()
 
-                self.move_toward_target()
+            # Agent reached a fire escape, proceed to exit
+            if self.model.fire_started and self.pos in self.model.fire_exit_list:
+                if self.carrying:
+                    carried_agent = self.carrying
+                    carried_agent.escaped = True
+                    self.model.grid.remove_agent(carried_agent)
 
-                # Agent reached a fire escape, proceed to exit
-                if self.model.fire_started and self.pos in self.model.fire_exit_list:
-                    if self.carrying:
-                        carried_agent = self.carrying
-                        carried_agent.escaped = True
-                        self.model.grid.remove_agent(carried_agent)
-
-                    self.escaped = True
-                    self.model.grid.remove_agent(self)
+                self.escaped = True
+                self.model.grid.remove_agent(self)
 
     def get_status(self):
         if self.health > self.MIN_HEALTH and not self.escaped:
@@ -908,6 +906,7 @@ class Human(Agent):
             carried_agent = self.carrying
             carried_agent.set_carried(False)
             self.carrying = None
+            self.planned_action = None
             print("Agent stopped carrying another agent")
 
     def set_carried(self, value: bool):
