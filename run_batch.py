@@ -11,7 +11,7 @@ from fire_evacuation.agent import Human
 
 OUTPUT_DIR = "."
 
-MIN_COLLABORATION = 9
+MIN_COLLABORATION = 0
 MAX_COLLABORATION = 10
 
 GRAPH_DPI = 100
