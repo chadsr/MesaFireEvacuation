@@ -563,6 +563,7 @@ class Human(Agent):
 
         if success:
             print("Agent informed others of a fire exit!")
+            self.verbal_collaboration_count += 1
 
     def check_for_collaboration(self):
         if self.carrying:  # If the agent is carrying someone, they are too occupied to do other collaboration
@@ -590,7 +591,6 @@ class Human(Agent):
                     elif isinstance(agent, FireExit):
                         # Verbal collaboration
                         self.verbal_collaboration(agent, location)
-                        self.verbal_collaboration_count += 1
 
     def get_next_location(self, path):
         try:
