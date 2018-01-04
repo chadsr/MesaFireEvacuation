@@ -270,6 +270,7 @@ class Human(Agent):
     SHOCK_MODIFIER_DEAD_HUMAN = 1.0
     SHOCK_MODIFIER_FIRE = 0.2
     SHOCK_MODIFIER_SMOKE = 0.05
+    SHOCK_MODIFIER_AFFECTED_HUMAN = 0.1
 
     PANIC_THRESHOLD = 0.8  # The value the panic score must reach for an agent to start panic behaviour
 
@@ -487,6 +488,8 @@ class Human(Agent):
                     shock_modifier += self.SHOCK_MODIFIER_SMOKE - self.DEFAULT_SHOCK_MODIFIER
                 if isinstance(agent, DeadHuman):
                     shock_modifier += self.SHOCK_MODIFIER_DEAD_HUMAN - self.DEFAULT_SHOCK_MODIFIER
+                if isinstance(agent, Human) and agent.get_mobility() != Human.Mobility.NORMAL:
+                    shock_modifier += self.SHOCK_MODIFIER_AFFECTED_HUMAN - self.DEFAULT_SHOCK_MODIFIER
 
         # If the agent's shock value increased and they didn't believe the alarm before, they now do believe it
         if not self.believes_alarm and shock_modifier != self.DEFAULT_SHOCK_MODIFIER:
