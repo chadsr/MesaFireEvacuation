@@ -249,6 +249,7 @@ class Human(Agent):
         PHYSICAL_SUPPORT = 0
         MORALE_SUPPORT = 1
         VERBAL_SUPPORT = 2
+        RETREAT = 3
 
     MIN_HEALTH = 0
     MAX_HEALTH = 1
@@ -648,6 +649,15 @@ class Human(Agent):
 
         return True
 
+    def get_retreat_location(self, next_location):
+        x, y = self.pos
+        next_x, next_y = next_location
+        diff_x = x - next_x
+        diff_y = y - next_y
+
+        retreat_location = (sum([x, diff_x]), sum([y, diff_y]))
+        return retreat_location
+
     def check_retreat(self, next_path, next_location):
         # Get the contents of any visible locations in the next path
         visible_path = []
@@ -660,21 +670,22 @@ class Human(Agent):
             if (isinstance(agent, Smoke) and not self.planned_action) or isinstance(agent, Fire):
                 # There's a danger in the visible path, so try and retreat in the opposite direction
                 # Retreat if there's fire, or smoke (and no collaboration attempt)
-                x, y = self.pos
-                next_x, next_y = next_location
-                diff_x = x - next_x
-                diff_y = y - next_y
-                retreat_location = (sum([x, diff_x]), sum([y, diff_y]))
+                retreat_location = self.get_retreat_location(next_location)
 
-                print(self.pos, retreat_location)
+                # Check if the retreat location is also smoke, if so, we are surrounded by smoke, so move randomly
+                contents = self.model.grid.get_cell_list_contents(retreat_location)
+                for agent in contents:
+                    if isinstance(agent, Smoke) or isinstance(agent, Fire):
+                        self.get_random_target()
+                        print("Agent surrounded by smoke and moving randomly")
+                        retreat_location = None
+                        break
 
-                if self.model.grid.out_of_bounds(retreat_location):
-                    print("retreat location out of bounds...")
+                if retreat_location:
+                    print("Agent retreating opposite to fire/smoke")
+                    self.planned_target = (None, retreat_location)
 
-                print("Agent retreating from fire/smoke")
-                self.planned_target = (None, retreat_location)
-                self.planned_action = None
-
+                self.planned_action = Human.Action.RETREAT
                 return True
 
     def update_target(self):
@@ -703,7 +714,9 @@ class Human(Agent):
             elif self.planned_action == Human.Action.PHYSICAL_SUPPORT and ((planned_agent.get_mobility() != Human.Mobility.INCAPACITATED) or planned_agent.is_carried()):
                 self.planned_target = (None, None)
                 self.planned_action = None
-        else:  # The agent no longer exists
+        elif self.planned_action == Human.Action.RETREAT:
+            return
+        else:  # Can no longer perform the action
             self.planned_target = (None, None)
             self.planned_action = None
 
