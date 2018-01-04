@@ -579,14 +579,12 @@ class Human(Agent):
                             # Physical collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = Human.Action.PHYSICAL_SUPPORT  # Plan to carry the agent
-                            self.physical_collaboration_count += 1
                             # print("Agent planned physical collaboration at", location)
                             break
                         elif agent.get_mobility() == Human.Mobility.PANIC and not self.planned_action:
                             # Morale collaboration
                             self.planned_target = (agent, location)  # Plan to move toward the target
                             self.planned_action = Human.Action.MORALE_SUPPORT  # Plan to carry the agent
-                            self.morale_collaboration_count += 1
                             # print("Agent planned morale collaboration at", location)
                             break
                     elif isinstance(agent, FireExit):
@@ -730,6 +728,7 @@ class Human(Agent):
             if not agent.is_carried():
                 self.carrying = agent
                 agent.set_carried(True)
+                self.physical_collaboration_count += 1
                 print("Agent started carrying another agent")
         elif self.planned_action == Human.Action.MORALE_SUPPORT:
             # Attempt to give the agent a permanent morale boost according to your experience score
@@ -737,6 +736,8 @@ class Human(Agent):
                 print("Morale boost succeeded")
             else:
                 print("Morale boost failed")
+
+            self.morale_collaboration_count += 1
 
         self.planned_action = None
 
