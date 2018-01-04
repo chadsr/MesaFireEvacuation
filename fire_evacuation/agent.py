@@ -773,9 +773,8 @@ class Human(Agent):
 
                 elif self.pos == path[-1]:
                     # The human reached their target!
-                    print("\nREACHED TARGET\n")
+
                     if self.planned_action:  # If they had an action to perform when they reached the target
-                        print("\nPLAN:", self.planned_target, self.planned_action)
                         self.perform_action()
 
                     self.planned_target = (None, None)
