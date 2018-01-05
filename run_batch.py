@@ -61,7 +61,7 @@ if args.human_count:
     human_count = args.human_count
 
 # Fixed parameters of our batch runs
-fixed_params = dict(floor_plan_file="floorplan_2.txt", human_count=human_count, fire_probability=0.8, visualise_vision=False, random_spawn=True, save_plots=True)
+fixed_params = dict(floor_plan_file="floorplan_testing.txt", human_count=human_count, fire_probability=0.8, visualise_vision=False, random_spawn=True, save_plots=True)
 
 # Vary percentage collaboration between MIN and MAX values above
 collaboration_range = range(MIN_COLLABORATION, MAX_COLLABORATION + 1, 10)
@@ -104,7 +104,7 @@ plt.savefig(OUTPUT_DIR + "/batch_graphs/batch_run_scatter_" + end_timestamp + ".
 
 fig = plt.figure(figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), dpi=GRAPH_DPI)
 ax = fig.gca()
-dataframe.boxplot(ax=ax, column="PercentageEscaped", by="collaboration_percentage", positions=list(collaboration_range), figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI))
+dataframe.boxplot(ax=ax, column="PercentageEscaped", by="collaboration_percentage", positions=list(collaboration_range), figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), showmeans=True)
 fig.suptitle("Evacuation Success: " + str(human_count) + " Human Agents, " + str(count) + " Iterations", fontsize=20)
 plt.xlabel("Percentage of Humans Collaborating (%)", fontsize=14)
 plt.ylabel("Percentage Escaped (%)", fontsize=14)
