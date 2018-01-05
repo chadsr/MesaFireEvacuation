@@ -96,11 +96,12 @@ plt.ylabel("Percentage Escaped (%)", fontsize=14)
 plt.xticks(range(MIN_COLLABORATION, MAX_COLLABORATION + 1))
 plt.ylim(0, 100)
 
-plt.savefig("batch_run_scatter" + end_timestamp + ".png", dpi=GRAPH_DPI)
+plt.savefig("batch_run_scatter_" + end_timestamp + ".png", dpi=GRAPH_DPI)
 
 fig = plt.figure(figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), dpi=GRAPH_DPI)
+ax = fig.gca()
 
-dataframe.boxplot(column="PercentageEscaped", by='collaboration_factor')
+dataframe.boxplot(ax=ax, column="PercentageEscaped", by='collaboration_factor')
 
 fig.suptitle("Evacuation Success: " + str(human_count) + " Human Agents, " + str((count * runs)) + " Iterations", fontsize=20)  # Assumes all merged dataframes had the same number of runs... which needs improving
 plt.xlabel("Collaboration Factor", fontsize=14)
@@ -109,4 +110,4 @@ plt.ylabel("Percentage Escaped (%)", fontsize=14)
 plt.xticks(range(MIN_COLLABORATION, MAX_COLLABORATION + 1))
 plt.ylim(0, 100)
 
-plt.savefig("batch_run_boxplot" + end_timestamp + ".png", dpi=GRAPH_DPI)
+plt.savefig("batch_run_boxplot_" + end_timestamp + ".png", dpi=GRAPH_DPI)
