@@ -173,9 +173,10 @@ class FireEvacuation(Model):
         collaboration_plot.set_title("Human Collaboration")
         collaboration_plot.set_xlabel("Simulation Step")
         collaboration_plot.set_ylabel("Successful Attempts")
+        collaboration_plot.set_ylim(ymin=0)
 
         timestr = time.strftime("%Y%m%d-%H%M%S")
-        plt.suptitle("Collaboration Factor: " + str(self.collaboration_factor) + " Number of Human Agents: " + str(self.human_count), fontsize=16)
+        plt.suptitle("Collaboration Factor: " + str(self.collaboration_factor) + ", Number of Human Agents: " + str(self.human_count), fontsize=16)
         plt.savefig(timestr + '.png')
 
     def start_fire(self):
