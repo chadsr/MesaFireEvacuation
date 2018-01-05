@@ -1,4 +1,4 @@
-from os import path
+import os
 import random
 import numpy as np
 import networkx as nx
@@ -32,7 +32,7 @@ class FireEvacuation(Model):
     def __init__(self, floor_plan_file, human_count, collaboration_percentage, fire_probability, visualise_vision, random_spawn, save_plots):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
-        with open(path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
+        with open(os.path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
             floorplan = np.matrix([line.strip().split() for line in f.readlines()])
 
         # Rotate the floorplan so it's interpreted as seen in the text file
@@ -161,6 +161,9 @@ class FireEvacuation(Model):
         self.running = True
 
     def save_figures(self):
+        DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        OUTPUT_DIR = DIR + "/output"
+
         results = self.datacollector.get_model_vars_dataframe()
 
         dpi = 100
@@ -187,7 +190,7 @@ class FireEvacuation(Model):
 
         timestr = time.strftime("%Y%m%d-%H%M%S")
         plt.suptitle("Percentage Collaborating: " + str(self.collaboration_percentage) + "%, Number of Human Agents: " + str(self.human_count), fontsize=16)
-        plt.savefig(path.join("./output/model_graphs/", timestr + ".png"))
+        plt.savefig(OUTPUT_DIR + "/model_graphs/" + timestr + ".png")
 
     def start_fire(self):
         rand = random.random()
