@@ -11,7 +11,8 @@ import pickle
 from fire_evacuation.model import FireEvacuation
 from fire_evacuation.agent import Human
 
-OUTPUT_DIR = "./output"
+DIR = os.path.dirname(os.path.realpath(__file__))
+OUTPUT_DIR = DIR + "/output"
 
 MIN_COLLABORATION = 0
 MAX_COLLABORATION = 100
@@ -23,7 +24,7 @@ GRAPH_HEIGHT = 1080
 
 # Concatenate all of the dataframe files found in the OUTPUT_DIR
 def merge_dataframes():
-    directory = os.path.join(OUTPUT_DIR, "/batch_results/")
+    directory = OUTPUT_DIR + "/batch_results/"
 
     previous_dataframe_files = [f for f in os.listdir(directory) if (os.path.isfile(os.path.join(directory, f)) and "dataframe_" in f)]
 
@@ -33,7 +34,7 @@ def merge_dataframes():
         print("Merging these dataframes:", previous_dataframe_files)
 
         for f in previous_dataframe_files:
-            df = pickle.load(open(f, "rb"))
+            df = pickle.load(open(directory + f, "rb"))
             dataframes.append(df)
 
         return pd.concat(dataframes, ignore_index=True), len(dataframes)  # Concatenate all of the dataframes together, while ignoring their indexes
@@ -83,7 +84,7 @@ for i in range(1, runs + 1):
 
     # Save the dataframe to a file so we have the oppurtunity to concatenate separate dataframes from separate runs
     dataframe = param_run.get_model_vars_dataframe()
-    dataframe.to_pickle(path=os.path.join(OUTPUT_DIR, "/batch_results/dataframe_" + end_timestamp + ".pickle"))
+    dataframe.to_pickle(path=OUTPUT_DIR + "/batch_results/dataframe_" + end_timestamp + ".pickle")
 
     elapsed = end - start  # Get the elapsed time in seconds
     print("Batch runner finished iteration %i. Took: %s" % (i, str(timedelta(seconds=elapsed))))
@@ -99,18 +100,14 @@ plt.xlabel("Percentage of Humans Collaborating (%)", fontsize=14)
 plt.ylabel("Percentage Escaped (%)", fontsize=14)
 plt.xticks(range(MIN_COLLABORATION, MAX_COLLABORATION + 1, 10))
 plt.ylim(0, 100)
-plt.savefig(os.path.join(OUTPUT_DIR, "/batch_graphs/batch_run_scatter_" + end_timestamp + ".png"), dpi=GRAPH_DPI)
+plt.savefig(OUTPUT_DIR + "/batch_graphs/batch_run_scatter_" + end_timestamp + ".png", dpi=GRAPH_DPI)
 
 fig = plt.figure(figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), dpi=GRAPH_DPI)
 ax = fig.gca()
-
-# TODO: lookup why it plots by index...
-dataframe.boxplot(ax=ax, column="PercentageEscaped", by="collaboration_percentage", positions=list(collaboration_range))
+dataframe.boxplot(ax=ax, column="PercentageEscaped", by="collaboration_percentage", positions=list(collaboration_range), figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI))
 fig.suptitle("Evacuation Success: " + str(human_count) + " Human Agents, " + str(count) + " Iterations", fontsize=20)
 plt.xlabel("Percentage of Humans Collaborating (%)", fontsize=14)
 plt.ylabel("Percentage Escaped (%)", fontsize=14)
 plt.xticks(collaboration_range)
 plt.ylim(0, 100)
-plt.savefig(os.path.join(OUTPUT_DIR, "/batch_graphs/batch_run_boxplot_" + end_timestamp + ".png"), dpi=GRAPH_DPI)
-
-print(dataframe)
+plt.savefig(OUTPUT_DIR + "/batch_graphs/batch_run_boxplot_" + end_timestamp + ".png", dpi=GRAPH_DPI)
