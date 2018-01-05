@@ -29,7 +29,7 @@ class FireEvacuation(Model):
     MIN_VISION = 1
     # MAX_VISION is simply the size of the grid
 
-    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision, random_spawn, save_plots):
+    def __init__(self, floor_plan_file, human_count, collaboration_percentage, fire_probability, visualise_vision, random_spawn, save_plots):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
         with open(path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
@@ -45,7 +45,7 @@ class FireEvacuation(Model):
         self.width = width
         self.height = height
         self.human_count = human_count
-        self.collaboration_factor = collaboration_factor
+        self.collaboration_percentage = collaboration_percentage
         self.visualise_vision = visualise_vision
         self.fire_probability = fire_probability
         self.fire_started = False  # Turns to true when a fire has started
@@ -118,7 +118,11 @@ class FireEvacuation(Model):
             }
         )
 
-        for i in range(0, human_count):
+        # Calculate how many agents will be collaborators
+        number_collaborators = int(round(self.human_count * (self.collaboration_percentage / 100)))
+        print("Num collab:", number_collaborators)
+
+        for i in range(0, self.human_count):
             if self.random_spawn:  # Place human agents randomly
                 pos = self.grid.find_empty()
             else:  # Place human agents at specified spawn locations
@@ -128,6 +132,12 @@ class FireEvacuation(Model):
                 # Create a random human
                 health = random.randint(self.MIN_HEALTH * 100, self.MAX_HEALTH * 100) / 100
                 speed = random.randint(self.MIN_SPEED, self.MAX_SPEED)
+
+                if number_collaborators > 0:
+                    collaborates = True
+                    number_collaborators -= 1
+                else:
+                    collaborates = False
 
                 # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
                 vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
@@ -141,7 +151,7 @@ class FireEvacuation(Model):
                 belief_distribution = [0.9, 0.1]  # [Believes, Doesn't Believe]
                 believes_alarm = np.random.choice([True, False], p=belief_distribution)
 
-                human = Human(pos, health=health, speed=speed, vision=vision, collaboration=collaboration_factor, nervousness=nervousness, role=None, experience=experience, believes_alarm=believes_alarm, model=self)
+                human = Human(pos, health=health, speed=speed, vision=vision, collaborates=collaborates, nervousness=nervousness, experience=experience, believes_alarm=believes_alarm, model=self)
 
                 self.grid.place_agent(human, pos)
                 self.schedule.add(human)
@@ -176,7 +186,7 @@ class FireEvacuation(Model):
         collaboration_plot.set_ylim(ymin=0)
 
         timestr = time.strftime("%Y%m%d-%H%M%S")
-        plt.suptitle("Collaboration Factor: " + str(self.collaboration_factor) + ", Number of Human Agents: " + str(self.human_count), fontsize=16)
+        plt.suptitle("Percentage Collaborating: " + str(self.collaboration_percentage) + "%, Number of Human Agents: " + str(self.human_count), fontsize=16)
         plt.savefig(timestr + '.png')
 
     def start_fire(self):

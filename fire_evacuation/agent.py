@@ -266,7 +266,7 @@ class Human(Agent):
 
     SLOWDOWN_THRESHOLD = 0.5  # When the health value drops below this value, the agent will being to slow down
 
-    def __init__(self, pos, health, speed, vision, collaboration, nervousness, role, experience, believes_alarm, model):
+    def __init__(self, pos, health, speed, vision, collaborates, nervousness, experience, believes_alarm, model):
         super().__init__(pos, model)
         self.traversable = False
 
@@ -281,7 +281,7 @@ class Human(Agent):
         self.speed = speed
         self.vision = vision
 
-        self.collaboration = collaboration
+        self.collaborates = collaborates  # Boolean specifying whether this agent will attempt collaboration
         self.verbal_collaboration_count = 0
         self.morale_collaboration_count = 0
         self.physical_collaboration_count = 0
@@ -292,7 +292,6 @@ class Human(Agent):
 
         self.knowledge = self.MIN_KNOWLEDGE
         self.nervousness = nervousness
-        self.role = role
         self.experience = experience
         self.believes_alarm = believes_alarm  # Boolean stating whether or not the agent believes the alarm is a real fire
         self.escaped = False
@@ -513,23 +512,16 @@ class Human(Agent):
             # print("Current knowledge:", self.knowledge)
 
     def get_collaboration_cost(self):
-        if self.collaboration == 0:
-            collaboration_cost = 0
-        else:
-            panic_score = self.get_panic_score()
-            total_count = self.verbal_collaboration_count + self.morale_collaboration_count + self.physical_collaboration_count
-            collaboration_component = 1 / np.exp(self.collaboration / (total_count + 1))  # TODO: Double check this..
-            collaboration_cost = (collaboration_component + panic_score) / 2
-            # print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
+        panic_score = self.get_panic_score()
+        total_count = self.verbal_collaboration_count + self.morale_collaboration_count + self.physical_collaboration_count
+        collaboration_component = 1 / np.exp(1 / (total_count + 1))  # The more time this agent has collaborated, the higher the score will become
+        collaboration_cost = (collaboration_component + panic_score) / 2
+        # print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
 
-        # print("Collaboration cost:", collaboration_cost)
         return collaboration_cost
 
     def test_collaboration(self):
         collaboration_cost = self.get_collaboration_cost()
-
-        if collaboration_cost == 0:
-            return False
 
         rand = random.random()
         if rand > collaboration_cost:  # Collaboration if rand is GREATER than our collaboratoin_cost (Highe collaboration_cost means less likely to collaborate)
@@ -826,7 +818,7 @@ class Human(Agent):
                     self.attempt_exit_plan()
 
                 # Check if anything in vision can be collaborated with, if the agent has normal mobility
-                if self.mobility == Human.Mobility.NORMAL:
+                if self.mobility == Human.Mobility.NORMAL and self.collaborates:
                     self.check_for_collaboration()
 
             planned_pos = self.planned_target[1]
