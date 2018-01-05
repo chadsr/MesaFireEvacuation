@@ -1,5 +1,12 @@
-*.png
-*.pickle
+batch_results/*.pickle
+!batch_results/.gitkeep
+
+model_graphs/*.png
+!model_graphs/.gitkeep
+
+batch_graphs/*.png
+!batch_graphs/.gitkeep
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
