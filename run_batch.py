@@ -34,9 +34,9 @@ def merge_dataframes():
             df = pickle.load(open(f, "rb"))
             dataframes.append(df)
 
-        return pd.concat(dataframes, ignore_index=True)  # Concatenate all of the dataframes together, while ignoring their indexes
+        return pd.concat(dataframes, ignore_index=True), len(dataframes)  # Concatenate all of the dataframes together, while ignoring their indexes
     else:
-        return None
+        return None, None
 
 
 parser = argparse.ArgumentParser()
@@ -85,15 +85,28 @@ print("Batch runner finished. Took: %s" % str(timedelta(seconds=elapsed)))
 dataframe = param_run.get_model_vars_dataframe()
 dataframe.to_pickle(path="dataframe_" + end_timestamp + ".pickle")
 
-dataframe = merge_dataframes()
+dataframe, count = merge_dataframes()
 
 fig = plt.figure(figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), dpi=GRAPH_DPI)
 plt.scatter(dataframe.collaboration_factor, dataframe.PercentageEscaped)
-fig.suptitle("Evacuation Success: " + str(human_count) + " Human Agents", fontsize=20)
+fig.suptitle("Evacuation Success: " + str(human_count) + " Human Agents, " + str((count * runs)) + " Iterations", fontsize=20)  # Assumes all merged dataframes had the same number of runs... which needs improving
 plt.xlabel("Collaboration Factor", fontsize=14)
 plt.ylabel("Percentage Escaped (%)", fontsize=14)
 
 plt.xticks(range(MIN_COLLABORATION, MAX_COLLABORATION + 1))
 plt.ylim(0, 100)
 
-plt.savefig("batch_run_" + end_timestamp + ".png", dpi=GRAPH_DPI)
+plt.savefig("batch_run_scatter" + end_timestamp + ".png", dpi=GRAPH_DPI)
+
+fig = plt.figure(figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), dpi=GRAPH_DPI)
+
+dataframe.boxplot(column="PercentageEscaped", by='collaboration_factor')
+
+fig.suptitle("Evacuation Success: " + str(human_count) + " Human Agents, " + str((count * runs)) + " Iterations", fontsize=20)  # Assumes all merged dataframes had the same number of runs... which needs improving
+plt.xlabel("Collaboration Factor", fontsize=14)
+plt.ylabel("Percentage Escaped (%)", fontsize=14)
+
+plt.xticks(range(MIN_COLLABORATION, MAX_COLLABORATION + 1))
+plt.ylim(0, 100)
+
+plt.savefig("batch_run_boxplot" + end_timestamp + ".png", dpi=GRAPH_DPI)
