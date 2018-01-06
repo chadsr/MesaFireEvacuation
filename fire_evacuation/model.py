@@ -1,4 +1,4 @@
-from os import path
+import os
 import random
 import numpy as np
 import networkx as nx
@@ -29,10 +29,10 @@ class FireEvacuation(Model):
     MIN_VISION = 1
     # MAX_VISION is simply the size of the grid
 
-    def __init__(self, floor_plan_file, human_count, collaboration_factor, fire_probability, visualise_vision, random_spawn, save_plots):
+    def __init__(self, floor_plan_file, human_count, collaboration_percentage, fire_probability, visualise_vision, random_spawn, save_plots):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
-        with open(path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
+        with open(os.path.join("fire_evacuation/floorplans/", floor_plan_file), "rt") as f:
             floorplan = np.matrix([line.strip().split() for line in f.readlines()])
 
         # Rotate the floorplan so it's interpreted as seen in the text file
@@ -45,7 +45,7 @@ class FireEvacuation(Model):
         self.width = width
         self.height = height
         self.human_count = human_count
-        self.collaboration_factor = collaboration_factor
+        self.collaboration_percentage = collaboration_percentage
         self.visualise_vision = visualise_vision
         self.fire_probability = fire_probability
         self.fire_started = False  # Turns to true when a fire has started
@@ -62,6 +62,8 @@ class FireEvacuation(Model):
         # Used to easily see if a location is a FireExit or Door, since this needs to be done a lot
         self.fire_exit_list = []
         self.door_list = []
+
+        # If random spawn is false, spawn_list will contain the list of possible spawn points according to the floorplan
         self.random_spawn = random_spawn
         self.spawn_list = []
 
@@ -88,7 +90,7 @@ class FireEvacuation(Model):
                 self.grid.place_agent(floor_object, (x, y))
                 self.schedule.add(floor_object)
 
-        # Create a graph of traversable routes
+        # Create a graph of traversable routes, used by agents for pathing
         self.graph = nx.Graph()
         for agents, x, y in self.grid.coord_iter():
             pos = (x, y)
@@ -104,6 +106,7 @@ class FireEvacuation(Model):
 
                     self.graph.add_edge(pos, neighbor)
 
+        # Collects statistics from our model run
         self.datacollector = DataCollector(
             {
                 "Alive": lambda m: self.count_human_status(m, Human.Status.ALIVE),
@@ -118,7 +121,11 @@ class FireEvacuation(Model):
             }
         )
 
-        for i in range(0, human_count):
+        # Calculate how many agents will be collaborators
+        number_collaborators = int(round(self.human_count * (self.collaboration_percentage / 100)))
+
+        # Start placing human agents
+        for i in range(0, self.human_count):
             if self.random_spawn:  # Place human agents randomly
                 pos = self.grid.find_empty()
             else:  # Place human agents at specified spawn locations
@@ -129,7 +136,13 @@ class FireEvacuation(Model):
                 health = random.randint(self.MIN_HEALTH * 100, self.MAX_HEALTH * 100) / 100
                 speed = random.randint(self.MIN_SPEED, self.MAX_SPEED)
 
-                # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
+                if number_collaborators > 0:
+                    collaborates = True
+                    number_collaborators -= 1
+                else:
+                    collaborates = False
+
+                # Vision statistics obtained from http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
                 vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
                 vision = int(np.random.choice(np.arange(self.MIN_VISION, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
 
@@ -141,7 +154,7 @@ class FireEvacuation(Model):
                 belief_distribution = [0.9, 0.1]  # [Believes, Doesn't Believe]
                 believes_alarm = np.random.choice([True, False], p=belief_distribution)
 
-                human = Human(pos, health=health, speed=speed, vision=vision, collaboration=collaboration_factor, nervousness=nervousness, role=None, experience=experience, believes_alarm=believes_alarm, model=self)
+                human = Human(pos, health=health, speed=speed, vision=vision, collaborates=collaborates, nervousness=nervousness, experience=experience, believes_alarm=believes_alarm, model=self)
 
                 self.grid.place_agent(human, pos)
                 self.schedule.add(human)
@@ -150,7 +163,11 @@ class FireEvacuation(Model):
 
         self.running = True
 
+    # Plots line charts of various statistics from a run
     def save_figures(self):
+        DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        OUTPUT_DIR = DIR + "/output"
+
         results = self.datacollector.get_model_vars_dataframe()
 
         dpi = 100
@@ -176,9 +193,11 @@ class FireEvacuation(Model):
         collaboration_plot.set_ylim(ymin=0)
 
         timestr = time.strftime("%Y%m%d-%H%M%S")
-        plt.suptitle("Collaboration Factor: " + str(self.collaboration_factor) + ", Number of Human Agents: " + str(self.human_count), fontsize=16)
-        plt.savefig(timestr + '.png')
+        plt.suptitle("Percentage Collaborating: " + str(self.collaboration_percentage) + "%, Number of Human Agents: " + str(self.human_count), fontsize=16)
+        plt.savefig(OUTPUT_DIR + "/model_graphs/" + timestr + ".png")
+        plt.close(fig)
 
+    # Starts a fire at a random piece of furniture with file_probability chance
     def start_fire(self):
         rand = random.random()
         if rand < self.fire_probability:

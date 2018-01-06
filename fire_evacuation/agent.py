@@ -7,64 +7,61 @@ from enum import Enum
 from mesa import Agent
 
 
-# Credits to http://www.roguebasin.com/index.php?title=Bresenham%27s_Line_Algorithm
-# Can be re-written eventually
 def get_line(start, end):
-    """Bresenham's Line Algorithm
-    Produces a list of tuples from start and end
-
-    >>> points1 = get_line((0, 0), (3, 4))
-    >>> points2 = get_line((3, 4), (0, 0))
-    >>> assert(set(points1) == set(points2))
-    >>> print points1
-    [(0, 0), (1, 1), (1, 2), (2, 3), (3, 4)]
-    >>> print points2
-    [(3, 4), (2, 3), (1, 2), (1, 1), (0, 0)]
     """
-    # Setup initial conditions
+    Implementaiton of Bresenham's Line Algorithm
+    Returns a list of tuple coordinates from starting tuple to end tuple (and including them)
+    """
+    # Break down start and end tuples
     x1, y1 = start
     x2, y2 = end
-    dx = x2 - x1
-    dy = y2 - y1
 
-    # Determine how steep the line is
-    is_steep = abs(dy) > abs(dx)
+    # Calculate differences
+    diff_x = x2 - x1
+    diff_y = y2 - y1
 
-    # Rotate line
-    if is_steep:
+    # Check if the line is steep
+    line_is_steep = abs(diff_y) > abs(diff_x)
+
+    # If the line is steep, rotate it
+    if line_is_steep:
+        # Swap x and y values for each pair
         x1, y1 = y1, x1
         x2, y2 = y2, x2
 
-    # Swap start and end points if necessary and store swap state
+    # If the start point is further along the x-axis than the end point, swap start and end
     swapped = False
     if x1 > x2:
         x1, x2 = x2, x1
         y1, y2 = y2, y1
         swapped = True
 
-    # Recalculate differentials
-    dx = x2 - x1
-    dy = y2 - y1
+    # Calculate the differences again
+    diff_x = x2 - x1
+    diff_y = y2 - y1
 
-    # Calculate error
-    error = int(dx / 2.0)
-    ystep = 1 if y1 < y2 else -1
+    # Calculate the error margin
+    error_margin = int(diff_x / 2.0)
+    step_y = 1 if y1 < y2 else -1
 
-    # Iterate over bounding box generating points between start and end
+    # Iterate over the bounding box, generating coordinates between the start and end coordinates
     y = y1
-    points = []
-    for x in range(x1, x2 + 1):
-        coord = (y, x) if is_steep else (x, y)
-        points.append(coord)
-        error -= abs(dy)
-        if error < 0:
-            y += ystep
-            error += dx
+    path = []
 
-    # Reverse the list if the coordinates were swapped
+    for x in range(x1, x2 + 1):
+        coord = (y, x) if line_is_steep else (x, y)  # Get a coordinate according to if x and y values were swapped
+        path.append(coord)  # Add it to our path
+        error_margin -= abs(diff_y)  # Deduct the absolute difference of y values from our error_margin
+
+        if error_margin < 0:  # When the error margin drops below zero, increase y by the step and the error_margin by the x difference
+            y += step_y
+            error_margin += diff_x
+
+    # The the start and end were swapped, reverse the path
     if swapped:
-        points.reverse()
-    return points
+        path.reverse()
+
+    return path
 
 
 """
@@ -266,7 +263,7 @@ class Human(Agent):
 
     SLOWDOWN_THRESHOLD = 0.5  # When the health value drops below this value, the agent will being to slow down
 
-    def __init__(self, pos, health, speed, vision, collaboration, nervousness, role, experience, believes_alarm, model):
+    def __init__(self, pos, health, speed, vision, collaborates, nervousness, experience, believes_alarm, model):
         super().__init__(pos, model)
         self.traversable = False
 
@@ -281,7 +278,7 @@ class Human(Agent):
         self.speed = speed
         self.vision = vision
 
-        self.collaboration = collaboration
+        self.collaborates = collaborates  # Boolean specifying whether this agent will attempt collaboration
         self.verbal_collaboration_count = 0
         self.morale_collaboration_count = 0
         self.physical_collaboration_count = 0
@@ -292,7 +289,6 @@ class Human(Agent):
 
         self.knowledge = self.MIN_KNOWLEDGE
         self.nervousness = nervousness
-        self.role = role
         self.experience = experience
         self.believes_alarm = believes_alarm  # Boolean stating whether or not the agent believes the alarm is a real fire
         self.escaped = False
@@ -513,23 +509,16 @@ class Human(Agent):
             # print("Current knowledge:", self.knowledge)
 
     def get_collaboration_cost(self):
-        if self.collaboration == 0:
-            collaboration_cost = 0
-        else:
-            panic_score = self.get_panic_score()
-            total_count = self.verbal_collaboration_count + self.morale_collaboration_count + self.physical_collaboration_count
-            collaboration_component = 1 / np.exp(self.collaboration / (total_count + 1))  # TODO: Double check this..
-            collaboration_cost = (collaboration_component + panic_score) / 2
-            # print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
+        panic_score = self.get_panic_score()
+        total_count = self.verbal_collaboration_count + self.morale_collaboration_count + self.physical_collaboration_count
+        collaboration_component = 1 / np.exp(1 / (total_count + 1))  # The more time this agent has collaborated, the higher the score will become
+        collaboration_cost = (collaboration_component + panic_score) / 2
+        # print("Collaboration cost:", collaboration_cost, "Component:", collaboration_component, "Panic component:", panic_score)
 
-        # print("Collaboration cost:", collaboration_cost)
         return collaboration_cost
 
     def test_collaboration(self):
         collaboration_cost = self.get_collaboration_cost()
-
-        if collaboration_cost == 0:
-            return False
 
         rand = random.random()
         if rand > collaboration_cost:  # Collaboration if rand is GREATER than our collaboratoin_cost (Highe collaboration_cost means less likely to collaborate)
@@ -603,7 +592,7 @@ class Human(Agent):
             if target in self.visible_tiles:  # Target is visible, so simply take the shortest path
                 path = nx.shortest_path(graph, self.pos, target)
             else:  # Target is not visible, so do less efficient pathing
-                # TODO: Replace with something more humanly (less efficient)
+                # TODO: In the future this could be replaced with a more naive path algorithm
                 path = nx.shortest_path(graph, self.pos, target)
 
                 if not include_target:
@@ -826,7 +815,7 @@ class Human(Agent):
                     self.attempt_exit_plan()
 
                 # Check if anything in vision can be collaborated with, if the agent has normal mobility
-                if self.mobility == Human.Mobility.NORMAL:
+                if self.mobility == Human.Mobility.NORMAL and self.collaborates:
                     self.check_for_collaboration()
 
             planned_pos = self.planned_target[1]
