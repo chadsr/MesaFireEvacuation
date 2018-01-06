@@ -8,7 +8,6 @@ from mesa import Agent
 
 
 # Credits to http://www.roguebasin.com/index.php?title=Bresenham%27s_Line_Algorithm
-# Can be re-written eventually
 def get_line(start, end):
     """Bresenham's Line Algorithm
     Produces a list of tuples from start and end
@@ -595,7 +594,7 @@ class Human(Agent):
             if target in self.visible_tiles:  # Target is visible, so simply take the shortest path
                 path = nx.shortest_path(graph, self.pos, target)
             else:  # Target is not visible, so do less efficient pathing
-                # TODO: Replace with something more humanly (less efficient)
+                # TODO: In the future this could be replaced with a more naive path algorithm
                 path = nx.shortest_path(graph, self.pos, target)
 
                 if not include_target:
