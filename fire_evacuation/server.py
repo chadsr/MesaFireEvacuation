@@ -8,6 +8,7 @@ from .model import FireEvacuation
 from .agent import FireExit, Wall, Furniture, Fire, Smoke, Human, Sight, Door, DeadHuman
 
 
+# Creates a visual portrayal of our model in the browser interface
 def fire_evacuation_portrayal(agent):
     if agent is None:
         return
@@ -66,9 +67,10 @@ def fire_evacuation_portrayal(agent):
     return portrayal
 
 
-# Was hoping floorplan could dictate the size of the grid, but seems the grid needs to be specified first :/
+# Was hoping floorplan could dictate the size of the grid, but seems the grid needs to be specified first, so the size is fixed to 50x50
 canvas_element = CanvasGrid(fire_evacuation_portrayal, 50, 50, 800, 800)
 
+# Define the charts on our web interface visualisation
 status_chart = ChartModule([{"Label": "Alive", "Color": "blue"},
                             {"Label": "Dead", "Color": "red"},
                             {"Label": "Escaped", "Color": "green"}])
@@ -84,6 +86,7 @@ collaboration_chart = ChartModule([{"Label": "Verbal Collaboration", "Color": "o
 # Get list of available floorplans
 floor_plans = [f for f in listdir("fire_evacuation/floorplans") if path.isfile(path.join("fire_evacuation/floorplans", f))]
 
+# Specify the parameters changeable by the user, in the web interface
 model_params = {
     "floor_plan_file": UserSettableParameter("choice", "Floorplan", value=floor_plans[0], choices=floor_plans),
     "human_count": UserSettableParameter("number", "Number Of Human Agents", value=10),
@@ -94,5 +97,6 @@ model_params = {
     "save_plots": UserSettableParameter('checkbox', 'Save plots to file', value=True)
 }
 
+# Start the visual server with the model
 server = ModularServer(FireEvacuation, [canvas_element, status_chart, mobility_chart, collaboration_chart], "Fire Evacuation",
                        model_params)

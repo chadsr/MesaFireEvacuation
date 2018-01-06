@@ -21,6 +21,10 @@ GRAPH_DPI = 100
 GRAPH_WIDTH = 1920
 GRAPH_HEIGHT = 1080
 
+"""
+This script starts a batch run of our model, without visualisation, for obtaining the final statistics we require, over multiple iterations
+"""
+
 
 # Concatenate all of the dataframe files found in the OUTPUT_DIR
 def merge_dataframes():
@@ -73,20 +77,24 @@ model_reporter = {"PercentageEscaped": lambda m: ((FireEvacuation.count_human_st
 # Create the batch runner
 print("Running batch test with %i runs for each parameter and %i human agents." % (runs, human_count))
 
-start = time.time()  # Time the batch run
+batch_start = time.time()  # Time the batch run
+
+# Run the batch runner 'runs' times (the number of iterations to make) and output a dataset and graphs each iteration
 for i in range(1, runs + 1):
+    iteration_start = time.time()  # Time the iteration
+
     param_run = BatchRunner(FireEvacuation, variable_parameters=variable_params, fixed_parameters=fixed_params, model_reporters=model_reporter)
 
     param_run.run_all()  # Run all simulations
 
-    end = time.time()
+    iteration_end = time.time()
     end_timestamp = time.strftime("%Y%m%d-%H%M%S")
 
     # Save the dataframe to a file so we have the oppurtunity to concatenate separate dataframes from separate runs
     dataframe = param_run.get_model_vars_dataframe()
     dataframe.to_pickle(path=OUTPUT_DIR + "/batch_results/dataframe_" + end_timestamp + ".pickle")
 
-    elapsed = end - start  # Get the elapsed time in seconds
+    elapsed = iteration_end - iteration_start  # Get the elapsed time in seconds
     print("Batch runner finished iteration %i. Took: %s" % (i, str(timedelta(seconds=elapsed))))
 
     dataframe, count = merge_dataframes()
@@ -113,3 +121,7 @@ for i in range(1, runs + 1):
     plt.ylim(0, 100)
     plt.savefig(OUTPUT_DIR + "/batch_graphs/batch_run_boxplot_" + end_timestamp + ".png", dpi=GRAPH_DPI)
     plt.close(fig)
+
+batch_end = time.time()
+elapsed = batch_end - batch_start  # Get the elapsed time in seconds
+print("Batch runner finished all iterations. Took: %s" % str(timedelta(seconds=elapsed)))
