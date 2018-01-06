@@ -191,6 +191,7 @@ class FireEvacuation(Model):
         timestr = time.strftime("%Y%m%d-%H%M%S")
         plt.suptitle("Percentage Collaborating: " + str(self.collaboration_percentage) + "%, Number of Human Agents: " + str(self.human_count), fontsize=16)
         plt.savefig(OUTPUT_DIR + "/model_graphs/" + timestr + ".png")
+        plt.close(fig)
 
     def start_fire(self):
         rand = random.random()

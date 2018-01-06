@@ -101,6 +101,7 @@ for i in range(1, runs + 1):
     plt.xticks(range(MIN_COLLABORATION, MAX_COLLABORATION + 1, 10))
     plt.ylim(0, 100)
     plt.savefig(OUTPUT_DIR + "/batch_graphs/batch_run_scatter_" + end_timestamp + ".png", dpi=GRAPH_DPI)
+    plt.close(fig)
 
     fig = plt.figure(figsize=(GRAPH_WIDTH / GRAPH_DPI, GRAPH_HEIGHT / GRAPH_DPI), dpi=GRAPH_DPI)
     ax = fig.gca()
@@ -109,5 +110,6 @@ for i in range(1, runs + 1):
     plt.xlabel("Percentage of Humans Collaborating (%)", fontsize=14)
     plt.ylabel("Percentage Escaped (%)", fontsize=14)
     plt.xticks(collaboration_range)
-plt.ylim(0, 100)
-plt.savefig(OUTPUT_DIR + "/batch_graphs/batch_run_boxplot_" + end_timestamp + ".png", dpi=GRAPH_DPI)
+    plt.ylim(0, 100)
+    plt.savefig(OUTPUT_DIR + "/batch_graphs/batch_run_boxplot_" + end_timestamp + ".png", dpi=GRAPH_DPI)
+    plt.close(fig)
