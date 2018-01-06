@@ -62,6 +62,8 @@ class FireEvacuation(Model):
         # Used to easily see if a location is a FireExit or Door, since this needs to be done a lot
         self.fire_exit_list = []
         self.door_list = []
+
+        # If random spawn is false, spawn_list will contain the list of possible spawn points according to the floorplan
         self.random_spawn = random_spawn
         self.spawn_list = []
 
@@ -88,7 +90,7 @@ class FireEvacuation(Model):
                 self.grid.place_agent(floor_object, (x, y))
                 self.schedule.add(floor_object)
 
-        # Create a graph of traversable routes
+        # Create a graph of traversable routes, used by agents for pathing
         self.graph = nx.Graph()
         for agents, x, y in self.grid.coord_iter():
             pos = (x, y)
@@ -104,6 +106,7 @@ class FireEvacuation(Model):
 
                     self.graph.add_edge(pos, neighbor)
 
+        # Collects statistics from our model run
         self.datacollector = DataCollector(
             {
                 "Alive": lambda m: self.count_human_status(m, Human.Status.ALIVE),
@@ -120,8 +123,8 @@ class FireEvacuation(Model):
 
         # Calculate how many agents will be collaborators
         number_collaborators = int(round(self.human_count * (self.collaboration_percentage / 100)))
-        print("Num collab:", number_collaborators)
 
+        # Start placing human agents
         for i in range(0, self.human_count):
             if self.random_spawn:  # Place human agents randomly
                 pos = self.grid.find_empty()
@@ -139,7 +142,7 @@ class FireEvacuation(Model):
                 else:
                     collaborates = False
 
-                # http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
+                # Vision statistics obtained from http://www.who.int/blindness/GLOBALDATAFINALforweb.pdf
                 vision_distribution = [0.0058, 0.0365, 0.0424, 0.9153]
                 vision = int(np.random.choice(np.arange(self.MIN_VISION, self.width + 1, (self.width / len(vision_distribution))), p=vision_distribution))
 
@@ -160,6 +163,7 @@ class FireEvacuation(Model):
 
         self.running = True
 
+    # Plots line charts of various statistics from a run
     def save_figures(self):
         DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         OUTPUT_DIR = DIR + "/output"
@@ -193,6 +197,7 @@ class FireEvacuation(Model):
         plt.savefig(OUTPUT_DIR + "/model_graphs/" + timestr + ".png")
         plt.close(fig)
 
+    # Starts a fire at a random piece of furniture with file_probability chance
     def start_fire(self):
         rand = random.random()
         if rand < self.fire_probability:
