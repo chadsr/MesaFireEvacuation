@@ -1,5 +1,7 @@
 # Fire Evacuation ABM
 
+The ![accompanying paper](https://github.com/Chadsr/MesaFireEvacuation/blob/master/Influence_of_Human_Behaviour_in_the_Evacuation_of_a_Burning_Building.pdf) includes both specification and experimental results.
+
 ## Setup
 **Requires Python 3.x**
 
@@ -28,6 +30,6 @@ Runs the model with num_iterations of all collaboration factor values with the g
 
 ### Realistic Vision
 
-![vision through smoke](https://github.com/CollectiveIntelligence/MesaFireEvacuation/blob/master/images/vision.png?raw=true)
+![vision through smoke](https://github.com/Chadsr/MesaFireEvacuation/blob/master/images/vision.png?raw=true)
 
 As we can see from the figure above, there is an incapacitated agent within the smoke. This agent can not be seen by our healthy agent and will therefore not be helped. We can also observe that the fire is still visible through the smoke, due to its high visibility value.
