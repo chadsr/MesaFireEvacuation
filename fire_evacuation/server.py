@@ -71,32 +71,60 @@ def fire_evacuation_portrayal(agent):
 canvas_element = CanvasGrid(fire_evacuation_portrayal, 50, 50, 800, 800)
 
 # Define the charts on our web interface visualisation
-status_chart = ChartModule([{"Label": "Alive", "Color": "blue"},
-                            {"Label": "Dead", "Color": "red"},
-                            {"Label": "Escaped", "Color": "green"}])
+status_chart = ChartModule(
+    [
+        {"Label": "Alive", "Color": "blue"},
+        {"Label": "Dead", "Color": "red"},
+        {"Label": "Escaped", "Color": "green"},
+    ]
+)
 
-mobility_chart = ChartModule([{"Label": "Normal", "Color": "green"},
-                              {"Label": "Panic", "Color": "red"},
-                              {"Label": "Incapacitated", "Color": "blue"}])
+mobility_chart = ChartModule(
+    [
+        {"Label": "Normal", "Color": "green"},
+        {"Label": "Panic", "Color": "red"},
+        {"Label": "Incapacitated", "Color": "blue"},
+    ]
+)
 
-collaboration_chart = ChartModule([{"Label": "Verbal Collaboration", "Color": "orange"},
-                                   {"Label": "Physical Collaboration", "Color": "red"},
-                                   {"Label": "Morale Collaboration", "Color": "pink"}])
+collaboration_chart = ChartModule(
+    [
+        {"Label": "Verbal Collaboration", "Color": "orange"},
+        {"Label": "Physical Collaboration", "Color": "red"},
+        {"Label": "Morale Collaboration", "Color": "pink"},
+    ]
+)
 
 # Get list of available floorplans
-floor_plans = [f for f in listdir("fire_evacuation/floorplans") if path.isfile(path.join("fire_evacuation/floorplans", f))]
+floor_plans = [
+    f
+    for f in listdir("fire_evacuation/floorplans")
+    if path.isfile(path.join("fire_evacuation/floorplans", f))
+]
 
 # Specify the parameters changeable by the user, in the web interface
 model_params = {
-    "floor_plan_file": UserSettableParameter("choice", "Floorplan", value=floor_plans[0], choices=floor_plans),
+    "floor_plan_file": UserSettableParameter(
+        "choice", "Floorplan", value=floor_plans[0], choices=floor_plans
+    ),
     "human_count": UserSettableParameter("number", "Number Of Human Agents", value=10),
-    "collaboration_percentage": UserSettableParameter("slider", "Percentage Collaborating", value=50, min_value=0, max_value=100, step=10),
-    "fire_probability": UserSettableParameter("slider", "Probability of Fire", value=0.1, min_value=0, max_value=1, step=0.01),
-    "random_spawn": UserSettableParameter('checkbox', 'Spawn Agents at Random Locations', value=True),
-    "visualise_vision": UserSettableParameter('checkbox', 'Show Agent Vision', value=False),
-    "save_plots": UserSettableParameter('checkbox', 'Save plots to file', value=True)
+    "collaboration_percentage": UserSettableParameter(
+        "slider", "Percentage Collaborating", value=50, min_value=0, max_value=100, step=10
+    ),
+    "fire_probability": UserSettableParameter(
+        "slider", "Probability of Fire", value=0.1, min_value=0, max_value=1, step=0.01
+    ),
+    "random_spawn": UserSettableParameter(
+        "checkbox", "Spawn Agents at Random Locations", value=True
+    ),
+    "visualise_vision": UserSettableParameter("checkbox", "Show Agent Vision", value=False),
+    "save_plots": UserSettableParameter("checkbox", "Save plots to file", value=True),
 }
 
 # Start the visual server with the model
-server = ModularServer(FireEvacuation, [canvas_element, status_chart, mobility_chart, collaboration_chart], "Fire Evacuation",
-                       model_params)
+server = ModularServer(
+    FireEvacuation,
+    [canvas_element, status_chart, mobility_chart, collaboration_chart],
+    "Fire Evacuation",
+    model_params,
+)

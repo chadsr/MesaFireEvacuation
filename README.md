@@ -1,12 +1,12 @@
 # Fire Evacuation ABM
 
-The ![accompanying paper](https://github.com/Chadsr/MesaFireEvacuation/blob/master/Influence_of_Human_Behaviour_in_the_Evacuation_of_a_Burning_Building.pdf) includes both specification and experimental results.
+The [accompanying paper](./docs/Influence_of_Human_Behaviour_in_the_Evacuation_of_a_Burning_Building.pdf) includes both specification and experimental results.
 
 ## Setup
-**Requires Python 3.x**
+*You will need to install [Poetry](https://python-poetry.org/docs/) using your preferred method, first, then:*
 
 ```
-pip install -r requirements.txt
+poetry install
 ```
 
 ## Usage
