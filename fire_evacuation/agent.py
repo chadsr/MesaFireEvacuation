@@ -7,6 +7,8 @@ from enum import Enum
 
 from mesa import Agent
 
+from fire_evacuation.utils import get_random_id
+
 
 def get_line(start, end):
     """
@@ -86,7 +88,8 @@ class FloorObject(Agent):
         visibility: int = 2,
         model=None,
     ):
-        super().__init__(pos, model)
+        rand_id = get_random_id()
+        super().__init__(rand_id, model)
         self.pos = pos
         self.traversable = traversable
         self.flammable = flammable
@@ -144,7 +147,12 @@ class Fire(FloorObject):
 
     def __init__(self, pos, model):
         super().__init__(
-            pos, traversable=False, flammable=False, spreads_smoke=True, visibility=20, model=model
+            pos,
+            traversable=False,
+            flammable=False,
+            spreads_smoke=True,
+            visibility=20,
+            model=model,
         )
         self.smoke_radius = 1
 
@@ -301,7 +309,8 @@ class Human(Agent):
         believes_alarm,
         model,
     ):
-        super().__init__(pos, model)
+        rand_id = get_random_id()
+        super().__init__(rand_id, model)
         self.traversable = False
 
         self.flammable = True

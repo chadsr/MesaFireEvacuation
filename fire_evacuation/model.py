@@ -268,7 +268,6 @@ class FireEvacuation(Model):
         if rand < self.fire_probability:
             fire_furniture: Furniture = random.choice(list(self.furniture.values()))
             pos = fire_furniture.pos
-            self.schedule.remove(fire_furniture)
 
             fire = Fire(pos, self)
             self.grid.place_agent(fire, pos)
