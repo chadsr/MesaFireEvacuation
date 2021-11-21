@@ -1,10 +1,13 @@
+from typing import Union
+from mesa.space import Coordinate
 import networkx as nx
 import numpy as np
 import sys
 import random
-from enum import Enum
-
+from enum import IntEnum
 from mesa import Agent
+
+from fire_evacuation.utils import get_random_id
 
 
 def get_line(start, end):
@@ -76,8 +79,17 @@ FLOOR STUFF
 
 
 class FloorObject(Agent):
-    def __init__(self, pos, traversable, flammable, spreads_smoke, visibility=2, model=None):
-        super().__init__(pos, model)
+    def __init__(
+        self,
+        pos: Coordinate,
+        traversable: bool,
+        flammable: bool,
+        spreads_smoke: bool,
+        visibility: int = 2,
+        model=None,
+    ):
+        rand_id = get_random_id()
+        super().__init__(rand_id, model)
         self.pos = pos
         self.traversable = traversable
         self.flammable = flammable
@@ -135,7 +147,12 @@ class Fire(FloorObject):
 
     def __init__(self, pos, model):
         super().__init__(
-            pos, traversable=False, flammable=False, spreads_smoke=True, visibility=20, model=model
+            pos,
+            traversable=False,
+            flammable=False,
+            spreads_smoke=True,
+            visibility=20,
+            model=model,
         )
         self.smoke_radius = 1
 
@@ -144,31 +161,28 @@ class Fire(FloorObject):
             self.pos, moore=False, include_center=False, radius=self.smoke_radius
         )
 
-        for neighbor in neighborhood:
-            place_smoke = True
-            place_fire = True
-            contents = self.model.grid.get_cell_list_contents(neighbor)
+        for neighbor_pos in neighborhood:
+            place_smoke = False
+            place_fire = False
+            contents = self.model.grid.get_cell_list_contents(neighbor_pos)
 
             if contents:
                 for agent in contents:
-                    if not agent.flammable:
-                        place_fire = False
-                    if not agent.spreads_smoke:
-                        place_smoke = False
+                    if agent.flammable:
+                        place_fire = True
+                    if agent.spreads_smoke:
+                        place_smoke = True
                     if place_fire and place_smoke:
                         break
 
-            else:
-                place_fire = False
-
             if place_fire:
-                fire = Fire(neighbor, self.model)
-                self.model.grid.place_agent(fire, neighbor)
+                fire = Fire(neighbor_pos, self.model)
                 self.model.schedule.add(fire)
+                self.model.grid.place_agent(fire, neighbor_pos)
             if place_smoke:
-                smoke = Smoke(neighbor, self.model)
-                self.model.grid.place_agent(smoke, neighbor)
+                smoke = Smoke(neighbor_pos, self.model)
                 self.model.schedule.add(smoke)
+                self.model.grid.place_agent(smoke, neighbor_pos)
 
     def get_position(self):
         return self.pos
@@ -232,17 +246,17 @@ class Human(Agent):
         ...
     """
 
-    class Mobility(Enum):
+    class Mobility(IntEnum):
         INCAPACITATED = 0
         NORMAL = 1
         PANIC = 2
 
-    class Status(Enum):
+    class Status(IntEnum):
         DEAD = 0
         ALIVE = 1
         ESCAPED = 2
 
-    class Action(Enum):
+    class Action(IntEnum):
         PHYSICAL_SUPPORT = 0
         MORALE_SUPPORT = 1
         VERBAL_SUPPORT = 2
@@ -285,17 +299,18 @@ class Human(Agent):
 
     def __init__(
         self,
-        pos,
-        health,
-        speed,
-        vision,
-        collaborates,
+        pos: Coordinate,
+        health: int,
+        speed: int,
+        vision: int,
+        collaborates: bool,
         nervousness,
         experience,
-        believes_alarm,
+        believes_alarm: bool,
         model,
     ):
-        super().__init__(pos, model)
+        rand_id = get_random_id()
+        super().__init__(rand_id, model)
         self.traversable = False
 
         self.flammable = True
@@ -304,40 +319,43 @@ class Human(Agent):
         self.pos = pos
         self.visibility = 2
         self.health = health
-        self.mobility = Human.Mobility.NORMAL
-        self.shock = self.MIN_SHOCK
+        self.mobility: Human.Mobility = Human.Mobility.NORMAL
+        self.shock: int = self.MIN_SHOCK
         self.speed = speed
         self.vision = vision
 
-        self.collaborates = (
-            collaborates  # Boolean specifying whether this agent will attempt collaboration
-        )
-        self.verbal_collaboration_count = 0
-        self.morale_collaboration_count = 0
-        self.physical_collaboration_count = 0
+        # Boolean specifying whether this agent will attempt collaboration
+        self.collaborates = collaborates
 
-        self.morale_boost = False
-        self.carried = False
-        self.carrying = None
+        self.verbal_collaboration_count: int = 0
+        self.morale_collaboration_count: int = 0
+        self.physical_collaboration_count: int = 0
+
+        self.morale_boost: bool = False
+        self.carried: bool = False
+        self.carrying: Union(Human, None) = None
 
         self.knowledge = self.MIN_KNOWLEDGE
         self.nervousness = nervousness
         self.experience = experience
         self.believes_alarm = believes_alarm  # Boolean stating whether or not the agent believes the alarm is a real fire
-        self.escaped = False
-        self.planned_target = (
-            None,
-            None,
-        )  # The location (agent, (x, y)) the agent is planning to move to
-        self.planned_action = None  # An action the agent intends to do when they reach their planned target {"carry", "morale"}
+        self.escaped: bool = False
 
-        self.visible_tiles = None
+        # The location (agent, (x, y)) the agent is planning to move to
+        self.planned_target: Coordinate = (
+            None,
+            None,
+        )
+
+        self.planned_action: Human.Action = None  # An action the agent intends to do when they reach their planned target {"carry", "morale"}
+
+        self.visible_tiles: list[Coordinate] = None
 
         # An empty set representing what the agent knows of the floor plan
-        self.known_tiles = set()
+        self.known_tiles: set[Coordinate] = set()
 
         # A set representing where the agent has between
-        self.visited_tiles = {self.pos}
+        self.visited_tiles: set[Coordinate] = {self.pos}
 
     def update_sight_tiles(self, visible_neighborhood):
         if self.visible_tiles:
@@ -961,7 +979,7 @@ class Human(Agent):
             self.move_toward_target()
 
             # Agent reached a fire escape, proceed to exit
-            if self.model.fire_started and self.pos in self.model.fire_exit_list:
+            if self.model.fire_started and self.pos in self.model.fire_exits.values():
                 if self.carrying:
                     carried_agent = self.carrying
                     carried_agent.escaped = True
