@@ -162,27 +162,34 @@ class Fire(FloorObject):
         )
 
         for neighbor_pos in neighborhood:
-            place_smoke = False
-            place_fire = False
             contents = self.model.grid.get_cell_list_contents(neighbor_pos)
 
             if contents:
+                has_smoke = False
+                has_fire = False
                 for agent in contents:
-                    if agent.flammable:
-                        place_fire = True
-                    if agent.spreads_smoke:
-                        place_smoke = True
-                    if place_fire and place_smoke:
+                    if isinstance(agent, Smoke):
+                        has_smoke = True
+                    elif isinstance(agent, Fire):
+                        has_fire = True
+                    if has_smoke and has_fire:
                         break
 
-            if place_fire:
-                fire = Fire(neighbor_pos, self.model)
-                self.model.schedule.add(fire)
-                self.model.grid.place_agent(fire, neighbor_pos)
-            if place_smoke:
-                smoke = Smoke(neighbor_pos, self.model)
-                self.model.schedule.add(smoke)
-                self.model.grid.place_agent(smoke, neighbor_pos)
+                if not has_fire:
+                    for agent in contents:
+                        if agent.flammable:
+                            fire = Fire(neighbor_pos, self.model)
+                            self.model.schedule.add(fire)
+                            self.model.grid.place_agent(fire, neighbor_pos)
+                            break
+
+                if not has_smoke:
+                    for agent in contents:
+                        if agent.spreads_smoke:
+                            smoke = Smoke(neighbor_pos, self.model)
+                            self.model.schedule.add(smoke)
+                            self.model.grid.place_agent(smoke, neighbor_pos)
+                            break
 
     def get_position(self):
         return self.pos
