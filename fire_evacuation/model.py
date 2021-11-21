@@ -7,7 +7,7 @@ import time
 
 from mesa import Model
 from mesa.datacollection import DataCollector
-from mesa.space import MultiGrid
+from mesa.space import Coordinate, MultiGrid
 from mesa.time import RandomActivation
 
 from .agent import Human, Wall, FireExit, Furniture, Fire, Door
@@ -66,39 +66,40 @@ class FireEvacuation(Model):
         self.grid = MultiGrid(height, width, torus=False)
 
         # Used to start a fire at a random furniture location
-        self.furniture_list = []
+        self.furniture: dict[Coordinate, Furniture] = {}
 
         # Used to easily see if a location is a FireExit or Door, since this needs to be done a lot
-        self.fire_exit_list = []
-        self.door_list = []
+        self.fire_exits: dict[Coordinate, FireExit] = {}
+        self.doors: dict[Coordinate, Door] = {}
 
-        # If random spawn is false, spawn_list will contain the list of possible spawn points according to the floorplan
+        # If random spawn is false, spawn_pos_list will contain the list of possible spawn points according to the floorplan
         self.random_spawn = random_spawn
-        self.spawn_list = []
+        self.spawn_pos_list: list[Coordinate] = []
 
         # Load floorplan objects
         for (x, y), value in np.ndenumerate(floorplan):
+            pos: Coordinate = (x, y)
+
             value = str(value)
             floor_object = None
             if value == "W":
-                floor_object = Wall((x, y), self)
+                floor_object = Wall(pos, self)
             elif value == "E":
-                floor_object = FireExit((x, y), self)
-                self.fire_exit_list.append((x, y))
-                self.door_list.append(
-                    (x, y)
-                )  # Add fire exits to doors as well, since, well, they are
+                floor_object = FireExit(pos, self)
+                self.fire_exits[pos] = floor_object
+                # Add fire exits to doors as well, since, well, they are
+                self.doors[pos] = floor_object
             elif value == "F":
-                floor_object = Furniture((x, y), self)
-                self.furniture_list.append((x, y))
+                floor_object = Furniture(pos, self)
+                self.furniture[pos] = floor_object
             elif value == "D":
-                floor_object = Door((x, y), self)
-                self.door_list.append((x, y))
+                floor_object = Door(pos, self)
+                self.doors[pos] = floor_object
             elif value == "S":
-                self.spawn_list.append((x, y))
+                self.spawn_pos_list.append(pos)
 
             if floor_object:
-                self.grid.place_agent(floor_object, (x, y))
+                self.grid.place_agent(floor_object, pos)
                 self.schedule.add(floor_object)
 
         # Create a graph of traversable routes, used by agents for pathing
@@ -114,7 +115,7 @@ class FireEvacuation(Model):
 
                 for neighbor in neighbors:
                     # If there is contents at this location and they are not Doors or FireExits, skip them
-                    if not self.grid.is_cell_empty(neighbor) and neighbor not in self.door_list:
+                    if not self.grid.is_cell_empty(neighbor) and neighbor not in self.doors.keys():
                         continue
 
                     self.graph.add_edge(pos, neighbor)
@@ -150,7 +151,7 @@ class FireEvacuation(Model):
             if self.random_spawn:  # Place human agents randomly
                 pos = self.grid.find_empty()
             else:  # Place human agents at specified spawn locations
-                pos = random.choice(self.spawn_list)
+                pos = random.choice(self.spawn_pos_list)
 
             if pos:
                 # Create a random human
@@ -265,12 +266,16 @@ class FireEvacuation(Model):
     def start_fire(self):
         rand = random.random()
         if rand < self.fire_probability:
-            fire_furniture = random.choice(self.furniture_list)
-            fire = Fire(fire_furniture, self)
-            self.grid.place_agent(fire, fire_furniture)
+            fire_furniture: Furniture = random.choice(list(self.furniture.values()))
+            pos = fire_furniture.pos
+            self.schedule.remove(fire_furniture)
+
+            fire = Fire(pos, self)
+            self.grid.place_agent(fire, pos)
             self.schedule.add(fire)
+
             self.fire_started = True
-            print("Fire started at:", fire_furniture)
+            print(f"Fire started at position {pos}")
 
     def step(self):
         """

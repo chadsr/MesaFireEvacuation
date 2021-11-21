@@ -1,3 +1,4 @@
+from mesa.space import Coordinate
 import networkx as nx
 import numpy as np
 import sys
@@ -76,7 +77,15 @@ FLOOR STUFF
 
 
 class FloorObject(Agent):
-    def __init__(self, pos, traversable, flammable, spreads_smoke, visibility=2, model=None):
+    def __init__(
+        self,
+        pos: Coordinate,
+        traversable: bool,
+        flammable: bool,
+        spreads_smoke: bool,
+        visibility: int = 2,
+        model=None,
+    ):
         super().__init__(pos, model)
         self.pos = pos
         self.traversable = traversable
@@ -144,31 +153,28 @@ class Fire(FloorObject):
             self.pos, moore=False, include_center=False, radius=self.smoke_radius
         )
 
-        for neighbor in neighborhood:
-            place_smoke = True
-            place_fire = True
-            contents = self.model.grid.get_cell_list_contents(neighbor)
+        for neighbor_pos in neighborhood:
+            place_smoke = False
+            place_fire = False
+            contents = self.model.grid.get_cell_list_contents(neighbor_pos)
 
             if contents:
                 for agent in contents:
-                    if not agent.flammable:
-                        place_fire = False
-                    if not agent.spreads_smoke:
-                        place_smoke = False
+                    if agent.flammable:
+                        place_fire = True
+                    if agent.spreads_smoke:
+                        place_smoke = True
                     if place_fire and place_smoke:
                         break
 
-            else:
-                place_fire = False
-
             if place_fire:
-                fire = Fire(neighbor, self.model)
-                self.model.grid.place_agent(fire, neighbor)
+                fire = Fire(neighbor_pos, self.model)
                 self.model.schedule.add(fire)
+                self.model.grid.place_agent(fire, neighbor_pos)
             if place_smoke:
-                smoke = Smoke(neighbor, self.model)
-                self.model.grid.place_agent(smoke, neighbor)
+                smoke = Smoke(neighbor_pos, self.model)
                 self.model.schedule.add(smoke)
+                self.model.grid.place_agent(smoke, neighbor_pos)
 
     def get_position(self):
         return self.pos
@@ -961,7 +967,7 @@ class Human(Agent):
             self.move_toward_target()
 
             # Agent reached a fire escape, proceed to exit
-            if self.model.fire_started and self.pos in self.model.fire_exit_list:
+            if self.model.fire_started and self.pos in self.model.fire_exits.values():
                 if self.carrying:
                     carried_agent = self.carrying
                     carried_agent.escaped = True
