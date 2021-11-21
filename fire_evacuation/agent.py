@@ -1,10 +1,10 @@
+from typing import Union
 from mesa.space import Coordinate
 import networkx as nx
 import numpy as np
 import sys
 import random
-from enum import Enum
-
+from enum import IntEnum
 from mesa import Agent
 
 from fire_evacuation.utils import get_random_id
@@ -246,17 +246,17 @@ class Human(Agent):
         ...
     """
 
-    class Mobility(Enum):
+    class Mobility(IntEnum):
         INCAPACITATED = 0
         NORMAL = 1
         PANIC = 2
 
-    class Status(Enum):
+    class Status(IntEnum):
         DEAD = 0
         ALIVE = 1
         ESCAPED = 2
 
-    class Action(Enum):
+    class Action(IntEnum):
         PHYSICAL_SUPPORT = 0
         MORALE_SUPPORT = 1
         VERBAL_SUPPORT = 2
@@ -299,14 +299,14 @@ class Human(Agent):
 
     def __init__(
         self,
-        pos,
-        health,
-        speed,
-        vision,
-        collaborates,
+        pos: Coordinate,
+        health: int,
+        speed: int,
+        vision: int,
+        collaborates: bool,
         nervousness,
         experience,
-        believes_alarm,
+        believes_alarm: bool,
         model,
     ):
         rand_id = get_random_id()
@@ -319,40 +319,43 @@ class Human(Agent):
         self.pos = pos
         self.visibility = 2
         self.health = health
-        self.mobility = Human.Mobility.NORMAL
-        self.shock = self.MIN_SHOCK
+        self.mobility: Human.Mobility = Human.Mobility.NORMAL
+        self.shock: int = self.MIN_SHOCK
         self.speed = speed
         self.vision = vision
 
-        self.collaborates = (
-            collaborates  # Boolean specifying whether this agent will attempt collaboration
-        )
-        self.verbal_collaboration_count = 0
-        self.morale_collaboration_count = 0
-        self.physical_collaboration_count = 0
+        # Boolean specifying whether this agent will attempt collaboration
+        self.collaborates = collaborates
 
-        self.morale_boost = False
-        self.carried = False
-        self.carrying = None
+        self.verbal_collaboration_count: int = 0
+        self.morale_collaboration_count: int = 0
+        self.physical_collaboration_count: int = 0
+
+        self.morale_boost: bool = False
+        self.carried: bool = False
+        self.carrying: Union(Human, None) = None
 
         self.knowledge = self.MIN_KNOWLEDGE
         self.nervousness = nervousness
         self.experience = experience
         self.believes_alarm = believes_alarm  # Boolean stating whether or not the agent believes the alarm is a real fire
-        self.escaped = False
-        self.planned_target = (
-            None,
-            None,
-        )  # The location (agent, (x, y)) the agent is planning to move to
-        self.planned_action = None  # An action the agent intends to do when they reach their planned target {"carry", "morale"}
+        self.escaped: bool = False
 
-        self.visible_tiles = None
+        # The location (agent, (x, y)) the agent is planning to move to
+        self.planned_target: Coordinate = (
+            None,
+            None,
+        )
+
+        self.planned_action: Human.Action = None  # An action the agent intends to do when they reach their planned target {"carry", "morale"}
+
+        self.visible_tiles: list[Coordinate] = None
 
         # An empty set representing what the agent knows of the floor plan
-        self.known_tiles = set()
+        self.known_tiles: set[Coordinate] = set()
 
         # A set representing where the agent has between
-        self.visited_tiles = {self.pos}
+        self.visited_tiles: set[Coordinate] = {self.pos}
 
     def update_sight_tiles(self, visible_neighborhood):
         if self.visible_tiles:

@@ -31,13 +31,13 @@ class FireEvacuation(Model):
 
     def __init__(
         self,
-        floor_plan_file,
-        human_count,
-        collaboration_percentage,
-        fire_probability,
-        visualise_vision,
-        random_spawn,
-        save_plots,
+        floor_plan_file: str,
+        human_count: int,
+        collaboration_percentage: float,
+        fire_probability: float,
+        visualise_vision: bool,
+        random_spawn: bool,
+        save_plots: bool,
     ):
         # Load floorplan
         # floorplan = np.genfromtxt(path.join("fire_evacuation/floorplans/", floor_plan_file))
