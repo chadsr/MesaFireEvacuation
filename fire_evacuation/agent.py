@@ -986,7 +986,7 @@ class Human(Agent):
             self.move_toward_target()
 
             # Agent reached a fire escape, proceed to exit
-            if self.model.fire_started and self.pos in self.model.fire_exits.values():
+            if self.model.fire_started and self.pos in self.model.fire_exits.keys():
                 if self.carrying:
                     carried_agent = self.carrying
                     carried_agent.escaped = True
