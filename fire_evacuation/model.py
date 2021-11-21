@@ -80,21 +80,21 @@ class FireEvacuation(Model):
         for (x, y), value in np.ndenumerate(floorplan):
             value = str(value)
             floor_object = None
-            if value is "W":
+            if value == "W":
                 floor_object = Wall((x, y), self)
-            elif value is "E":
+            elif value == "E":
                 floor_object = FireExit((x, y), self)
                 self.fire_exit_list.append((x, y))
                 self.door_list.append(
                     (x, y)
                 )  # Add fire exits to doors as well, since, well, they are
-            elif value is "F":
+            elif value == "F":
                 floor_object = Furniture((x, y), self)
                 self.furniture_list.append((x, y))
-            elif value is "D":
+            elif value == "D":
                 floor_object = Door((x, y), self)
                 self.door_list.append((x, y))
-            elif value is "S":
+            elif value == "S":
                 self.spawn_list.append((x, y))
 
             if floor_object:
@@ -317,9 +317,9 @@ class FireEvacuation(Model):
         """
         count = 0
         for agent in model.schedule.agents:
-            if isinstance(agent, Human):
-                if agent.get_status() == status:
-                    count += 1
+            if isinstance(agent, Human) and agent.get_status() == status:
+                count += 1
+
         return count
 
     @staticmethod
@@ -329,7 +329,7 @@ class FireEvacuation(Model):
         """
         count = 0
         for agent in model.schedule.agents:
-            if isinstance(agent, Human):
-                if agent.get_mobility() == mobility:
-                    count += 1
+            if isinstance(agent, Human) and agent.get_mobility() == mobility:
+                count += 1
+
         return count
