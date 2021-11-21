@@ -1,5 +1,7 @@
 # Fire Evacuation ABM
 
+[![Tests](https://github.com/Chadsr/MesaFireEvacuation/actions/workflows/tests.yml/badge.svg)](https://github.com/Chadsr/MesaFireEvacuation/actions/workflows/tests.yml)
+
 The [accompanying paper](./docs/Influence_of_Human_Behaviour_in_the_Evacuation_of_a_Burning_Building.pdf) includes both specification and experimental results.
 
 ## Setup
