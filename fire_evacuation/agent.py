@@ -52,17 +52,14 @@ def get_line(start, end):
     path = []
 
     for x in range(x1, x2 + 1):
-        coord = (
-            (y, x) if line_is_steep else (x, y)
-        )  # Get a coordinate according to if x and y values were swapped
+        # Get a coordinate according to if x and y values were swapped
+        coord = (y, x) if line_is_steep else (x, y)
         path.append(coord)  # Add it to our path
-        error_margin -= abs(
-            diff_y
-        )  # Deduct the absolute difference of y values from our error_margin
+        # Deduct the absolute difference of y values from our error_margin
+        error_margin -= abs(diff_y)
 
-        if (
-            error_margin < 0
-        ):  # When the error margin drops below zero, increase y by the step and the error_margin by the x difference
+        # When the error margin drops below zero, increase y by the step and the error_margin by the x difference
+        if error_margin < 0:
             y += step_y
             error_margin += diff_x
 
@@ -290,9 +287,8 @@ class Human(Agent):
     SHOCK_MODIFIER_SMOKE = 0.05
     SHOCK_MODIFIER_AFFECTED_HUMAN = 0.1
 
-    PANIC_THRESHOLD = (
-        0.8  # The value the panic score must reach for an agent to start panic behaviour
-    )
+    # The value the panic score must reach for an agent to start panic behaviour
+    PANIC_THRESHOLD = 0.8
 
     HEALTH_MODIFIER_FIRE = 0.2
     HEALTH_MODIFIER_SMOKE = 0.005
@@ -300,9 +296,8 @@ class Human(Agent):
     SPEED_MODIFIER_FIRE = 2
     SPEED_MODIFIER_SMOKE = 0.1
 
-    SLOWDOWN_THRESHOLD = (
-        0.5  # When the health value drops below this value, the agent will being to slow down
-    )
+    # When the health value drops below this value, the agent will being to slow down
+    SLOWDOWN_THRESHOLD = 0.5
 
     MIN_PUSH_DAMAGE = 0.01
     MAX_PUSH_DAMAGE = 1.0
@@ -392,9 +387,9 @@ class Human(Agent):
             self.pos, moore=True, include_center=True, radius=self.vision
         )
         visible_neighborhood = set()
-        checked_tiles = (
-            set()
-        )  # A set of already checked tiles, for avoiding repetition and thus increased efficiency
+
+        # A set of already checked tiles, for avoiding repetition and thus increased efficiency
+        checked_tiles = set()
 
         for pos in reversed(
             neighborhood
@@ -506,9 +501,9 @@ class Human(Agent):
     def get_panic_score(self):
         health_component = 1 / np.exp(self.health / self.nervousness)
         experience_component = 1 / np.exp(self.experience / self.nervousness)
-        panic_score = (
-            health_component + experience_component + self.shock
-        ) / 3  # Calculate the mean of the components
+
+        # Calculate the mean of the components
+        panic_score = (health_component + experience_component + self.shock) / 3
 
         # print("Panic score:", panic_score, "Health Score:", health_component, "Experience Score:", experience_component, "Shock score:", self.shock)
 
@@ -520,11 +515,9 @@ class Human(Agent):
         self.traversable = True
 
     def die(self):
-        pos = (
-            self.pos
-        )  # Store the agent's position of death so we can remove them and place a DeadHuman
+        # Store the agent's position of death so we can remove them and place a DeadHuman
+        pos = self.pos
         self.model.grid.remove_agent(self)
-        self.model.schedule.remove(self)
         dead_self = DeadHuman(pos, self.model)
         self.model.grid.place_agent(dead_self, pos)
         print("Agent died at", pos)
@@ -562,9 +555,8 @@ class Human(Agent):
         if self.morale_boost:  # If the agent recieved a morale boost, they will not panic again
             return
 
-        shock_modifier = (
-            self.DEFAULT_SHOCK_MODIFIER
-        )  # Shock will decrease by this amount if no new shock is added
+        # Shock will decrease by this amount if no new shock is added
+        shock_modifier = self.DEFAULT_SHOCK_MODIFIER
         for _, agents in self.visible_tiles:
             for agent in agents:
                 if isinstance(agent, Fire):
@@ -629,6 +621,7 @@ class Human(Agent):
             + self.morale_collaboration_count
             + self.physical_collaboration_count
         )
+
         collaboration_component = 1 / np.exp(
             1 / (total_count + 1)
         )  # The more time this agent has collaborated, the higher the score will become
@@ -907,7 +900,7 @@ class Human(Agent):
 
             # inure the pushed agent slightly
             current_health = agent.get_health()
-            damage = np.random.randint(self.MIN_PUSH_DAMAGE, self.MAX_PUSH_DAMAGE)
+            damage = np.random.uniform(self.MIN_PUSH_DAMAGE, self.MAX_PUSH_DAMAGE)
             agent.set_health(current_health - damage)
         else:
             neighborhood_contents = {}
