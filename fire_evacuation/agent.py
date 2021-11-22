@@ -300,7 +300,7 @@ class Human(Agent):
     SLOWDOWN_THRESHOLD = 0.5
 
     MIN_PUSH_DAMAGE = 0.01
-    MAX_PUSH_DAMAGE = 1.0
+    MAX_PUSH_DAMAGE = 0.2
 
     def __init__(
         self,
@@ -375,9 +375,8 @@ class Human(Agent):
 
         # Add new vision tiles
         for contents, tile in visible_neighborhood:
-            if (
-                self.model.grid.is_cell_empty(tile) or contents
-            ):  # Don't place if the tile has contents but the agent can't see it
+            # Don't place if the tile has contents but the agent can't see it
+            if self.model.grid.is_cell_empty(tile) or len(contents) > 0:
                 sight_object = Sight(tile, self.model)
                 self.model.grid.place_agent(sight_object, tile)
 
@@ -391,9 +390,8 @@ class Human(Agent):
         # A set of already checked tiles, for avoiding repetition and thus increased efficiency
         checked_tiles = set()
 
-        for pos in reversed(
-            neighborhood
-        ):  # Reverse the neighborhood so we start from the furthest locations and work our way inwards
+        # Reverse the neighborhood so we start from the furthest locations and work our way inwards
+        for pos in reversed(neighborhood):
             if pos not in checked_tiles:
                 blocked = False
                 try:
@@ -407,14 +405,12 @@ class Human(Agent):
                             if isinstance(obj, Sight):
                                 # ignore sight tiles
                                 continue
-                            elif isinstance(
-                                obj, Wall
-                            ):  # We hit a wall, reject rest of path and move to next
+                            elif isinstance(obj, Wall):
+                                # We hit a wall, reject rest of path and move to next
                                 blocked = True
                                 break
-                            elif isinstance(
-                                obj, Smoke
-                            ):  # We hit a smoke tile, increase the counter
+                            elif isinstance(obj, Smoke):
+                                # We hit a smoke tile, increase the counter
                                 smoke_count += 1
 
                             # If the object has a visibility score greater than the smoke encountered in the path, it's visible
@@ -452,7 +448,7 @@ class Human(Agent):
 
         traversable_pos = [pos for pos in known_pos if self.location_is_traversable(pos)]
 
-        while not self.planned_target[1] or self.planned_target[1] == self.pos:
+        while not self.planned_target[1]:
             i = np.random.choice(len(traversable_pos))
             target_pos = traversable_pos[i]
             if target_pos in graph_nodes and target_pos != self.pos:
@@ -634,9 +630,8 @@ class Human(Agent):
         collaboration_cost = self.get_collaboration_cost()
 
         rand = np.random.random()
-        if (
-            rand > collaboration_cost
-        ):  # Collaboration if rand is GREATER than our collaboration_cost (Higher collaboration_cost means less likely to collaborate)
+        # Collaboration if rand is GREATER than our collaboration_cost (Higher collaboration_cost means less likely to collaborate)
+        if rand > collaboration_cost:
             return True
         else:
             return False
@@ -661,9 +656,8 @@ class Human(Agent):
             self.verbal_collaboration_count += 1
 
     def check_for_collaboration(self):
-        if (
-            self.carrying
-        ):  # If the agent is carrying someone, they are too occupied to do other collaboration
+        # If the agent is carrying someone, they are too occupied to do other collaboration
+        if self.carrying:
             return
 
         if self.test_collaboration():
@@ -673,9 +667,8 @@ class Human(Agent):
 
                 for agent in visible_agents:
                     if isinstance(agent, Human) and not self.planned_action:
-                        if (
-                            agent.get_mobility() == Human.Mobility.INCAPACITATED
-                        ):  # If the agent is incapacitated, help them
+                        if agent.get_mobility() == Human.Mobility.INCAPACITATED:
+                            # If the agent is incapacitated, help them
                             # Physical collaboration
                             # Plan to move toward the target
                             self.planned_target = (
@@ -845,7 +838,7 @@ class Human(Agent):
         elif self.planned_action == Human.Action.PHYSICAL_SUPPORT and (
             (planned_agent.get_mobility() != Human.Mobility.INCAPACITATED)
             or planned_agent.is_carried()
-            or not planned_agent.get_status() == Human.Status.ALIVE
+            or planned_agent.get_status() != Human.Status.ALIVE
         ):
             self.planned_target = (None, None)
             self.planned_action = None
@@ -920,9 +913,11 @@ class Human(Agent):
             self.update_action()
 
         while self.planned_target[1] and not next_location:
-            if self.location_is_traversable(self.planned_target[1]):  # Target is traversable
+            if self.location_is_traversable(self.planned_target[1]):
+                # Target is traversable
                 path = self.get_path(graph, self.planned_target[1])
-            else:  # Target is not traversable (e.g. we are going to another Human), so don't include target in the path
+            else:
+                # Target is not traversable (e.g. we are going to another Human), so don't include target in the path
                 path = self.get_path(graph, self.planned_target[1], include_target=False)
 
             if len(path) > 0:
@@ -939,7 +934,8 @@ class Human(Agent):
                     continue
 
                 # Test the next location to see if we can move there
-                if self.location_is_traversable(next_location):  # Move normally
+                if self.location_is_traversable(next_location):
+                    # Move normally
                     self.previous_pos = self.pos
                     self.model.grid.move_agent(self, next_location)
                     self.visited_tiles.add(next_location)
@@ -962,9 +958,7 @@ class Human(Agent):
                 elif self.pos == path[-1]:
                     # The human reached their target!
 
-                    if (
-                        self.planned_action
-                    ):  # If they had an action to perform when they reached the target
+                    if self.planned_action:
                         self.perform_action()
 
                     self.planned_target = (None, None)
@@ -1026,9 +1020,8 @@ class Human(Agent):
         if not self.escaped and self.pos:
             self.health_mobility_rules()
 
-            if (
-                self.mobility == Human.Mobility.INCAPACITATED or not self.pos
-            ):  # Incapacitated or died, so return already
+            if self.mobility == Human.Mobility.INCAPACITATED or not self.pos:
+                # Incapacitated or died, so return already
                 return
 
             self.visible_tiles = self.get_visible_tiles()
@@ -1054,9 +1047,8 @@ class Human(Agent):
             elif self.mobility == Human.Mobility.PANIC:  # Panic
                 panic_score = self.get_panic_score()
 
-                if (
-                    panic_score > 0.9 and np.random.random() < panic_score
-                ):  # If they have above 90% panic score, test the score to see if they faint
+                if panic_score > 0.9 and np.random.random() < panic_score:
+                    # If they have above 90% panic score, test the score to see if they faint
                     print("Agent fainted!")
                     self.incapacitate()
                     return
