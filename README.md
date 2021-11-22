@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/Chadsr/MesaFireEvacuation/actions/workflows/tests.yml/badge.svg)](https://github.com/Chadsr/MesaFireEvacuation/actions/workflows/tests.yml)
 
-The [accompanying paper](./docs/Influence_of_Human_Behaviour_in_the_Evacuation_of_a_Burning_Building.pdf) includes both specification and experimental results.
+The [accompanying paper](./docs/Influence_of_Human_Behaviour_in_the_Evacuation_of_a_Burning_Building.pdf) includes both specification and experimental results. To view the code exactly as it was in the paper, please see [here](https://github.com/Chadsr/MesaFireEvacuation/tree/2597862708a57785b1cb67d4bf527e5896d30a7b).
 
 ## Setup
 *You will need to install [Poetry](https://python-poetry.org/docs/) using your preferred method, first, then:*
