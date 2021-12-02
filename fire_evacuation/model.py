@@ -1,5 +1,4 @@
 import os
-import random
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -107,18 +106,19 @@ class FireEvacuation(Model):
         for agents, x, y in self.grid.coord_iter():
             pos = (x, y)
 
-            # If the location is empty, or a door
-            if not agents or any(isinstance(agent, Door) for agent in agents):
-                neighbors = self.grid.get_neighborhood(
+            # If the location is empty, or there are no non-traversable agents
+            if len(agents) == 0 or not any(not agent.traversable for agent in agents):
+                neighbors_pos = self.grid.get_neighborhood(
                     pos, moore=True, include_center=True, radius=1
                 )
 
-                for neighbor in neighbors:
-                    # If there is contents at this location and they are not Doors or FireExits, skip them
-                    if not self.grid.is_cell_empty(neighbor) and neighbor not in self.doors.keys():
-                        continue
-
-                    self.graph.add_edge(pos, neighbor)
+                for neighbor_pos in neighbors_pos:
+                    # If the neighbour position is empty, or no non-traversable contents, add an edge
+                    if self.grid.is_cell_empty(neighbor_pos) or not any(
+                        not agent.traversable
+                        for agent in self.grid.get_cell_list_contents(neighbor_pos)
+                    ):
+                        self.graph.add_edge(pos, neighbor_pos)
 
         # Collects statistics from our model run
         self.datacollector = DataCollector(
@@ -151,12 +151,12 @@ class FireEvacuation(Model):
             if self.random_spawn:  # Place human agents randomly
                 pos = self.grid.find_empty()
             else:  # Place human agents at specified spawn locations
-                pos = random.choice(self.spawn_pos_list)
+                pos = np.random.choice(self.spawn_pos_list)
 
             if pos:
                 # Create a random human
-                health = random.randint(self.MIN_HEALTH * 100, self.MAX_HEALTH * 100) / 100
-                speed = random.randint(self.MIN_SPEED, self.MAX_SPEED)
+                health = np.random.randint(self.MIN_HEALTH * 100, self.MAX_HEALTH * 100) / 100
+                speed = np.random.randint(self.MIN_SPEED, self.MAX_SPEED)
 
                 if number_collaborators > 0:
                     collaborates = True
@@ -196,7 +196,7 @@ class FireEvacuation(Model):
                     )
                 )  # Random choice starting at 1 and up to and including 10
 
-                experience = random.randint(self.MIN_EXPERIENCE, self.MAX_EXPERIENCE)
+                experience = np.random.randint(self.MIN_EXPERIENCE, self.MAX_EXPERIENCE)
 
                 belief_distribution = [0.9, 0.1]  # [Believes, Doesn't Believe]
                 believes_alarm = np.random.choice([True, False], p=belief_distribution)
@@ -264,9 +264,9 @@ class FireEvacuation(Model):
 
     # Starts a fire at a random piece of furniture with file_probability chance
     def start_fire(self):
-        rand = random.random()
+        rand = np.random.random()
         if rand < self.fire_probability:
-            fire_furniture: Furniture = random.choice(list(self.furniture.values()))
+            fire_furniture: Furniture = np.random.choice(list(self.furniture.values()))
             pos = fire_furniture.pos
 
             fire = Fire(pos, self)
