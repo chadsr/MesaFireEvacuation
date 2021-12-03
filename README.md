@@ -8,6 +8,7 @@ The [accompanying paper](./docs/Influence_of_Human_Behaviour_in_the_Evacuation_o
 *You will need to install [Poetry](https://python-poetry.org/docs/) using your preferred method, first, then:*
 
 ```
+cd MesaFireEvacutation/
 poetry install
 ```
 
@@ -15,7 +16,7 @@ poetry install
 ### Visualised Run
 
 ```
-python run.py
+poetry run python run.py
 ```
 
 Runs the model with a visual interface, in which parameters can be changed.
@@ -23,7 +24,7 @@ Runs the model with a visual interface, in which parameters can be changed.
 ### Batch Run
 
 ```
-python run_batch.py <num_iterations> <num_humans>
+poetry run python run_batch.py <num_iterations> <num_humans>
 ```
 
 Runs the model with num_iterations of all collaboration factor values with the given num_humans.
