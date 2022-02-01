@@ -381,7 +381,7 @@ class Human(Agent):
                 self.model.grid.place_agent(sight_object, tile)
 
     # A strange implementation of ray-casting, using Bresenham's Line Algorithm, which takes into account smoke and visibility of objects
-    def get_visible_tiles(self) -> tuple[Coordinate, tuple[Agent]]:
+    def get_visible_tiles(self):
         neighborhood = self.model.grid.get_neighborhood(
             self.pos, moore=True, include_center=True, radius=self.vision
         )
@@ -626,7 +626,7 @@ class Human(Agent):
 
         return collaboration_cost
 
-    def test_collaboration(self) -> bool:
+    def test_collaboration(self):
         collaboration_cost = self.get_collaboration_cost()
 
         rand = np.random.random()
@@ -719,7 +719,7 @@ class Human(Agent):
                 f"Failed to get next location: {e}\nPath: {path},\nlen: {length},\nSpeed: {self.speed}"
             )
 
-    def get_path(self, graph, target, include_target=True) -> list[Coordinate]:
+    def get_path(self, graph, target, include_target=True):
         path = []
         visible_tiles_pos = [pos for pos, _ in self.visible_tiles]
 
@@ -755,7 +755,7 @@ class Human(Agent):
             print(f"No path between nodes! ({self.pos} -> {target})")
             return path
 
-    def location_is_traversable(self, pos) -> bool:
+    def location_is_traversable(self, pos):
         if not self.model.grid.is_cell_empty(pos):
             contents = self.model.grid.get_cell_list_contents(pos)
             for agent in contents:
@@ -764,7 +764,7 @@ class Human(Agent):
 
         return True
 
-    def get_retreat_location(self, next_location) -> Coordinate:
+    def get_retreat_location(self, next_location):
         x, y = self.pos
         next_x, next_y = next_location
         diff_x = x - next_x
@@ -773,7 +773,7 @@ class Human(Agent):
         retreat_location = (sum([x, diff_x]), sum([y, diff_y]))
         return retreat_location
 
-    def check_retreat(self, next_path, next_location) -> bool:
+    def check_retreat(self, next_path, next_location):
         # Get the contents of any visible locations in the next path
         visible_path = []
         for visible_pos, _ in self.visible_tiles:
