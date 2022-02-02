@@ -54,7 +54,6 @@ def get_obstacle_img(fp_filename):
     objects = get_symbol_coords(height, width, "mappedin_YOLO60.txt")
 
     id_to_class = get_classes()
-    print(id_to_class)
     for obj in objects:
         symbol_class = id_to_class[int(obj[0])]
         # only draw the obstacle if it is in the OBSTACLES list
@@ -62,7 +61,6 @@ def get_obstacle_img(fp_filename):
             start = (obj[1], obj[3])
             end = (obj[2], obj[4])
             cv2.rectangle(img, start, end, (0, 0, 0), -1)
-    cv2.imwrite("../input/images/test_img.png", img)
     return img
 
 

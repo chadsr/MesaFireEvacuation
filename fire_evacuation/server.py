@@ -1,3 +1,5 @@
+import os
+import numpy as np
 from os import listdir, path
 
 from mesa.visualization.modules import CanvasGrid, ChartModule
@@ -70,10 +72,6 @@ def fire_evacuation_portrayal(agent):
 
     return portrayal
 
-
-# Was hoping floorplan could dictate the size of the grid, but seems the grid needs to be specified first, so the size is fixed to 50x50
-canvas_element = CanvasGrid(fire_evacuation_portrayal, 50, 50, 800, 800)
-
 # Define the charts on our web interface visualisation
 status_chart = ChartModule(
     [
@@ -105,6 +103,18 @@ floor_plans = [
     for f in listdir("fire_evacuation/floorplans")
     if path.isfile(path.join("fire_evacuation/floorplans", f))
 ]
+
+# get the floorplan dimensions to set the grid dimensions
+with open(os.path.join("fire_evacuation/floorplans/", floor_plans[0]), "rt") as f:
+    floorplan = np.matrix([line.strip().split() for line in f.readlines()])
+
+# Rotate the floorplan so it's interpreted as seen in the text file
+floorplan = np.rot90(floorplan, 3)
+
+height, width = np.shape(floorplan)
+
+canvas_element = CanvasGrid(fire_evacuation_portrayal, height, width, 800, 800)
+f.close()
 
 # Specify the parameters changeable by the user, in the web interface
 model_params = {

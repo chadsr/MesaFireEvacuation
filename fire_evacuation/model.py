@@ -47,7 +47,7 @@ class FireEvacuation(Model):
         floorplan = np.rot90(floorplan, 3)
 
         # Check what dimension our floorplan is
-        width, height = np.shape(floorplan)
+        height, width = np.shape(floorplan)
 
         # Init params
         self.width = width
