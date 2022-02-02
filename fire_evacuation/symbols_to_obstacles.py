@@ -12,7 +12,8 @@ def get_classes():
     with open(f"../input/labels/classes.txt") as f:
         classes = f.readlines()
         for c in classes:
-            id_to_class[class_id] = c
+            id_to_class[class_id] = c.strip("\n")
+            class_id += 1
     return id_to_class
 
 
@@ -53,6 +54,7 @@ def get_obstacle_img(fp_filename):
     objects = get_symbol_coords(height, width, "mappedin_YOLO60.txt")
 
     id_to_class = get_classes()
+    print(id_to_class)
     for obj in objects:
         symbol_class = id_to_class[int(obj[0])]
         # only draw the obstacle if it is in the OBSTACLES list
@@ -62,3 +64,12 @@ def get_obstacle_img(fp_filename):
             cv2.rectangle(img, start, end, (0, 0, 0), -1)
     cv2.imwrite("../input/images/test_img.png", img)
     return img
+
+
+def add_obstacles_to_GAN(gan_filename):
+    gan_img = cv2.imread(f"../input/labels/{gan_filename}")
+    obstacle_img = get_obstacle_img("GAN_image.png")
+
+    gan_img[np.where(obstacle_img == 0)] = 0
+
+    return gan_img
