@@ -346,11 +346,11 @@ traitlets = "*"
 
 [[package]]
 name = "mesa"
-version = "0.8.9"
+version = "1.0.0"
 description = "Agent-based modeling (ABM) in Python 3+"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.7"
 
 [package.dependencies]
 click = "*"
@@ -755,7 +755,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8,<3.11"
-content-hash = "caae899befd10dd7244c99f46ed319e0f658cae7138c425535ceb66a8f1ee778"
+content-hash = "31dcca49abd3f95e63f8c7788e27023fd5e6459834faa223fd4aa077f3fbf70d"
 
 [metadata.files]
 appnope = [
@@ -1048,8 +1048,8 @@ matplotlib-inline = [
     {file = "matplotlib_inline-0.1.3-py3-none-any.whl", hash = "sha256:aed605ba3b72462d64d475a21a9296f400a19c4f74a31b59103d2a99ffd5aa5c"},
 ]
 mesa = [
-    {file = "Mesa-0.8.9-py3-none-any.whl", hash = "sha256:b0c129f3bc3405e7775472ff41317dc33a1b7a155d7b66f524520b34048c9d69"},
-    {file = "Mesa-0.8.9.tar.gz", hash = "sha256:603adf98ad8a2d2db57689e9b281ffba15bd3174438d37a3668d54b921b12c18"},
+    {file = "Mesa-1.0.0-py3-none-any.whl", hash = "sha256:3993fc23e419f25770ce3aabae77632404c68eb27332a5cec5ad73833ed21a1f"},
+    {file = "Mesa-1.0.0.tar.gz", hash = "sha256:7a875468be60a6e185102ceb34d4870fa440ea6302ae96b72028fd5364987f8c"},
 ]
 mypy-extensions = [
     {file = "mypy_extensions-0.4.3-py2.py3-none-any.whl", hash = "sha256:090fedd75945a69ae91ce1303b5824f428daf5a028d2f6ab8a299250a846f15d"},
